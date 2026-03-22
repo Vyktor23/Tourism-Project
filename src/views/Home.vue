@@ -199,7 +199,11 @@ const goToExplore = () => router.push('/explore')
 
 const goToDestination = (dest) => {
   router.push(
+<<<<<<< HEAD
     `/explore/${dest.municipio.slug}/${dest.slug}`
+=======
+    '/explore/' + dest.municipio.slug + '/' + dest.slug
+>>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   )
 }
 
