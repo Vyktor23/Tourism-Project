@@ -61,7 +61,11 @@ onMounted(() => {
   // 📍 Marker
   L.marker([props.lat, props.lng], { icon: customIcon })
     .addTo(map)
+<<<<<<< HEAD
     .bindPopup(`<strong>${props.name}</strong>`)
+=======
+    .bindPopup('<strong>' + props.name + '</strong>')
+>>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 })
 
 onUnmounted(() => {
