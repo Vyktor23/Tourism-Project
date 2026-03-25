@@ -12,14 +12,22 @@
       <!-- SLIDES -->
       <div
         class="hero-track"
+<<<<<<< HEAD
         :style="{ transform: `translateX(-${currentIndex * 100}%)` }"
+=======
+        :style="{ transform: 'translateX(-' + (currentIndex * 100) + '%)' }"
+>>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
       >
         <article
           v-for="(slide, i) in slides"
           :key="i"
           class="hero-item"
           :class="{ active: i === currentIndex }"
+<<<<<<< HEAD
           :style="{ backgroundImage: `url(${slide.image})` }"
+=======
+          :style="{ backgroundImage: 'url(' + slide.image + ')' }"
+>>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
         >
           <div class="overlay"></div>
 

@@ -114,7 +114,11 @@ const shareLocation = () => {
 
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude, longitude } = pos.coords
+<<<<<<< HEAD
     const url = `https://maps.google.com/?q=${latitude},${longitude}`
+=======
+    const url = 'https://maps.google.com/?q=' + latitude + ',' + longitude
+>>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
     navigator.share
       ? navigator.share({
           title: 'Mi ubicación actual',
