@@ -3,7 +3,7 @@ import { supabase } from '@/data/clientSupabase.js'
 export const getMunicipios = async () => {
   const { data, error } = await supabase
     .from('municipios')
-    .select('id, name, slug, province, description, image')
+    .select('id, name, slug, province, departamento, description, image, id_departamento, id_provincia')
     .order('name')
 
   if (error) {
