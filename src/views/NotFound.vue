@@ -6,7 +6,7 @@
     <div class="actions">
       <button @click="go('/home')">🏠 Inicio</button>
       <button @click="go('/explore')">🧭 Explorar</button>
-      <button @click="go('/ai')">🤖 Asistente</button>
+      <button @click="go('/favorites')">❤️ Favoritos</button>
     </div>
   </div>
 </template>

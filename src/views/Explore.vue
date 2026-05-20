@@ -14,30 +14,19 @@
 
     <!-- QUICK ACTIONS -->
     <section class="quick-actions">
-<<<<<<< HEAD
-      <button class="qa" @click="comingSoon('Mapa')">🗺️<span>Mapa</span></button>
-      <button class="qa" @click="comingSoon('Experiencias')">🎒<span>Experiencias</span></button>
-      <button class="qa" @click="comingSoon('Top')">🔥<span>Top</span></button>
-      <button class="qa" @click="comingSoon('Eventos')">🎉<span>Eventos</span></button>
-=======
-      <button class="qa" :class="{ active: viewMode === 'destinos' && showMap }" @click="openMap">🗺️<span>Mapa</span></button>
-      <button class="qa" :class="{ active: viewMode === 'destinos' && showCategoryFilters }" @click="openExperiences">🎒<span>Experiencias</span></button>
+      <button class="qa" :class="{ active: viewMode === 'destinos' && showMap }"
+        @click="openMap">🗺️<span>Mapa</span></button>
+      <button class="qa" :class="{ active: viewMode === 'destinos' && showCategoryFilters }"
+        @click="openExperiences">🎒<span>Experiencias</span></button>
       <button class="qa" :class="{ active: sortMode === 'top' }" @click="toggleTop">🔥<span>Top</span></button>
       <button class="qa" @click="openEventos">🎉<span>Eventos</span></button>
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
     </section>
 
     <!-- SEARCH -->
     <section class="search-section">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Buscar pueblos, cascadas, planes..."
-      />
-<<<<<<< HEAD
-=======
+      <input v-model="searchQuery" type="text" placeholder="Buscar pueblos, cascadas, planes..." />
 
-      <!-- VIEW TOGGLE (misma estética de chips) -->
+      <!-- VIEW TOGGLE -->
       <div class="view-toggle">
         <button :class="{ active: viewMode === 'municipios' }" @click="setView('municipios')">
           Municipios
@@ -50,32 +39,20 @@
         </button>
       </div>
 
-      <!-- ACTIVE FILTERS (chips de estado) -->
+      <!-- ACTIVE FILTERS -->
       <div v-if="activeFilterChips.length" class="active-filters">
         <span v-for="c in activeFilterChips" :key="c" class="chip">
           {{ c }}
         </span>
       </div>
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
     </section>
 
     <!-- MOODS -->
     <section class="block">
       <h2>Elige tu mood</h2>
       <div class="moods">
-        <div
-          v-for="mood in moods"
-<<<<<<< HEAD
-          :key="mood.label"
-          class="mood"
-          @click="goTo(mood.route)"
-=======
-          :key="mood.value"
-          class="mood"
-          :class="{ active: selectedMood === mood.value }"
-          @click="toggleMood(mood.value)"
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
-        >
+        <div v-for="mood in moods" :key="mood.value" class="mood" :class="{ active: selectedMood === mood.value }"
+          @click="toggleMood(mood.value)">
           <span>{{ mood.icon }}</span>
           <p>{{ mood.label }}</p>
         </div>
@@ -83,102 +60,51 @@
     </section>
 
     <!-- TRENDING -->
-    <section class="block">
+    <section ref="trendingSection" class="block">
       <h2>🔥 Tendencias ahora</h2>
 
       <div class="trending">
-        <div
-<<<<<<< HEAD
-          v-for="item in trending"
-          :key="item.slug"
-          class="trend-card"
-          @click="goToMunicipio(item)"
-        >
-          <img :src="item.image" />
-          <div class="trend-info">
-            <p>{{ item.name }}</p>
-            <span>⭐ {{ item.rating || '4.8' }}</span>
-=======
-          v-for="item in trendingDestinos"
-          :key="item.slug"
-          class="trend-card"
-          @click="goToDestino(item)"
-        >
+        <div v-for="item in trendingDestinos" :key="item.slug" class="trend-card" @click="goToDestino(item)">
           <img :src="item.image || fallbackImg" :alt="item.name" />
           <div class="trend-info">
             <p>{{ item.name }}</p>
             <span>⭐ {{ Number(item.rating || 0).toFixed(1) }}</span>
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Provincias  -->
+    <!-- PROVINCIAS -->
     <section class="block">
       <h2>Provincias</h2>
       <div class="categories">
-        <button
-<<<<<<< HEAD
-          v-for="prov in provinces"
-=======
-          v-for="prov in provinceOptions"
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
-          :key="prov"
-          :class="{ active: selectedProvince === prov }"
-          @click="toggleProvince(prov)"
-        >
+        <button v-for="prov in provinceOptions" :key="prov" :class="{ active: selectedProvince === prov }"
+          @click="toggleProvince(prov)">
           {{ prov }}
         </button>
       </div>
     </section>
 
-<<<<<<< HEAD
-    <!-- GRID -->
-    <section class="block">
-      <MunicipioList
-        v-if="filteredMunicipios.length"
-        :municipios="filteredMunicipios"
-        :loading="loading"
-        variant="grid"
-        @select="goToMunicipio"
-      />
-
-      <div v-else class="empty">
-        <p>No encontramos resultados</p>
-      </div>
-=======
     <!-- CATEGORÍAS (solo en destinos) -->
     <section v-if="viewMode === 'destinos' && showCategoryFilters" class="block">
       <h2>Experiencias</h2>
 
       <div class="categories">
-        <button
-          v-for="cat in categoryOptions"
-          :key="cat"
-          :class="{ active: selectedCategories.has(cat) }"
-          @click="toggleCategory(cat)"
-        >
+        <button v-for="cat in categoryOptions" :key="cat" :class="{ active: selectedCategories.has(cat) }"
+          @click="toggleCategory(cat)">
           {{ cat }}
         </button>
       </div>
 
       <div class="subfilters">
         <div class="chips">
-          <button
-            v-for="d in difficultyOptions"
-            :key="d"
-            :class="{ active: selectedDifficulty === d }"
-            @click="toggleDifficulty(d)"
-          >
+          <button v-for="d in difficultyOptions" :key="d" :class="{ active: selectedDifficulty === d }"
+            @click="toggleDifficulty(d)">
             {{ d }}
           </button>
 
-          <button
-            class="fav"
-            :class="{ active: onlyFavorites }"
-            @click="onlyFavorites = !onlyFavorites; setView('destinos')"
-          >
+          <button class="fav" :class="{ active: onlyFavorites }"
+            @click="onlyFavorites = !onlyFavorites; setView('destinos')">
             ❤️ Solo favoritos
           </button>
         </div>
@@ -196,10 +122,7 @@
         <button class="close-map" @click="showMap = false">Cerrar</button>
       </div>
 
-      <DestinationsMap
-        :destinations="mapDestinos"
-        @select="goToDestino"
-      />
+      <DestinationsMap :destinations="mapDestinos" @select="goToDestino" />
 
       <p v-if="!mapDestinos.length" class="map-empty">
         No hay destinos con ubicación para mostrar con esos filtros.
@@ -209,13 +132,8 @@
     <!-- GRID -->
     <section class="block">
       <template v-if="viewMode === 'municipios'">
-        <MunicipioList
-          v-if="filteredMunicipios.length"
-          :municipios="filteredMunicipios"
-          :loading="loadingMunicipios"
-          variant="grid"
-          @select="goToMunicipio"
-        />
+        <MunicipioList v-if="filteredMunicipios.length" :municipios="filteredMunicipios" :loading="loadingMunicipios"
+          variant="grid" @select="goToMunicipio" />
 
         <div v-else class="empty">
           <p>No encontramos municipios con esos filtros</p>
@@ -223,58 +141,26 @@
       </template>
 
       <template v-else>
-        <DestinationList
-          :destinations="filteredDestinos"
-          :loading="loadingDestinos"
-          variant="grid"
-          @select="goToDestino"
-        >
+        <DestinationList :destinations="filteredDestinos" :loading="loadingDestinos" variant="grid"
+          @select="goToDestino">
           <template #empty>
             <p>No encontramos destinos con esos filtros 😕</p>
           </template>
         </DestinationList>
       </template>
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
     </section>
 
     <!-- CTA -->
     <section class="cta-box">
       <h3>¿No sabes qué elegir?</h3>
-      <p>Te ayudamos a encontrar el plan perfecto</p>
-      <button @click="goTo('/ai')">Sorpréndeme</button>
+      <p>Explora los destinos en tendencia</p>
+      <button @click="scrollToTrending">Ver tendencias</button>
     </section>
 
   </div>
 </template>
 
 <script setup>
-<<<<<<< HEAD
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import MunicipioList from '@/components/MunicipioList.vue'
-import { onMounted } from 'vue'
-import { getMunicipios } from '@/services/municipiosService'
-
-defineOptions({ name: 'ExplorePage' })
-
-const municipios = ref([])
-const loading = ref(true)
-
-const loadMunicipios = async () => {
-  loading.value = true
-  try {
-    municipios.value = (await getMunicipios()).map(m => ({
-      ...m
-    }))
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(loadMunicipios)
-=======
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import MunicipioList from '@/components/MunicipioList.vue'
@@ -319,9 +205,6 @@ const onlyFavorites = ref(false)
 const showCategoryFilters = ref(false)
 const showMap = ref(false)
 
-// Orden simple para el botón Top.
-// default: sin orden especial (solo filtros)
-// top: ordena por rating desc (y si hay empate, por name)
 const sortMode = ref('default')
 
 const { isFavorite } = useFavorites()
@@ -367,23 +250,10 @@ const goToDestino = (dest) => {
   if (!mSlug || !dest?.slug) return
   router.push('/explore/' + mSlug + '/' + dest.slug)
 }
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 
 const filteredMunicipios = computed(() => {
   let results = municipios.value
 
-<<<<<<< HEAD
-  if (searchQuery.value) {
-    results = results.filter(m =>
-      m.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-  }
-
-  if (selectedProvince.value) {
-    results = results.filter(
-      m => m.province === selectedProvince.value
-    )
-=======
   const q = normalizeForSearch(searchQuery.value)
   if (q) {
     results = results.filter(m => {
@@ -396,32 +266,11 @@ const filteredMunicipios = computed(() => {
 
   if (selectedProvince.value) {
     results = results.filter(m => m.province === selectedProvince.value)
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   }
 
   return results
 })
 
-<<<<<<< HEAD
-const router = useRouter()
-
-const searchQuery = ref('')
-const selectedProvince = ref(null)
-
-const goToMunicipio = (municipio) => {
-  router.push({
-    name: 'MunicipioDetail',
-    params: {
-      municipioSlug: municipio.slug
-    }
-  })
-}
-
-const trending = computed(() => municipios.value.slice(0, 5))
-
-const provinces = [
-  'Área Metropolitana de Bucaramanga',
-=======
 const trendingDestinos = computed(() => {
   const t = destinos.value.filter(d => d?.trending)
   if (t.length) return t.slice(0, 8)
@@ -433,7 +282,6 @@ const trendingDestinos = computed(() => {
 const PROVINCE_ORDER = [
   'Área Metropolitana de Bucaramanga',
   'Provincia Metropolitana',
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   'Soto Norte',
   'Soto',
   'Guanentá',
@@ -443,34 +291,6 @@ const PROVINCE_ORDER = [
   'Yariguíes'
 ]
 
-<<<<<<< HEAD
-const moods = [
-  { label: 'Aventura', icon: '🌄', route: '/mood/adventure' },
-  { label: 'Romántico', icon: '💑', route: '/mood/romantic' },
-  { label: 'Relax', icon: '🧘', route: '/mood/relax' },
-  { label: 'Familiar', icon: '👨‍👩‍👧', route: '/mood/family' }
-]
-
-
-const toggleProvince = (prov) => {
-  selectedProvince.value =
-    selectedProvince.value === prov ? null : prov
-}
-
-const goTo = (path) => router.push(path)
-const goBack = () => router.back()
-
-const comingSoon = (feature) => {
-  // MVP: no abrimos rutas fantasma
-  alert(`${feature}: más adelante. Primero hagamos que lo básico funcione bien 😄`)
-}
-</script>
-
-<style scoped>
-* {
-  box-sizing: border-box;
-}
-=======
 const provinceOptions = computed(() => {
   const set = new Set(municipios.value.map(m => m?.province).filter(Boolean))
   const ordered = PROVINCE_ORDER.filter(p => set.has(p))
@@ -526,8 +346,6 @@ const filteredDestinos = computed(() => {
     results = results.filter(d => {
       const moods = d?.moodCanon || d?.mood || []
       if (Array.isArray(moods) && moods.includes(m)) return true
-
-      // Fallback si tu data aún no trae Romántico/Familiar
       const cats = d?.categoriesCanon || d?.categories || []
       if (m === 'Romántico') return cats.includes('Gastronomía') || cats.includes('Cultura')
       if (m === 'Familiar') return cats.includes('Familiar')
@@ -539,7 +357,6 @@ const filteredDestinos = computed(() => {
     results = results.filter(d => {
       const cats = d?.categoriesCanon || d?.categories || []
       if (!Array.isArray(cats) || !cats.length) return false
-      // OR: cualquier categoría seleccionada
       for (const c of selectedCategories.value) {
         if (cats.includes(c)) return true
       }
@@ -568,7 +385,6 @@ const filteredDestinos = computed(() => {
 })
 
 const mapDestinos = computed(() => {
-  // Solo destinos con coordenadas válidas
   return filteredDestinos.value.filter(d => {
     const lat = Number(d?.latitude)
     const lng = Number(d?.longitude)
@@ -599,7 +415,6 @@ const activeFilterChips = computed(() => {
   return chips
 })
 
-/* Actions */
 const setView = (mode) => {
   viewMode.value = mode
   if (mode === 'municipios') {
@@ -664,8 +479,13 @@ const openMap = () => {
 }
 
 const openEventos = () => {
-  // A futuro: feed global. Por ahora, eventos se ven por municipio.
   alert('Eventos: por ahora se ven dentro de cada municipio (detalle). Luego hacemos un feed global.')
+}
+
+const trendingSection = ref(null)
+
+const scrollToTrending = () => {
+  trendingSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const goBack = () => router.back()
@@ -673,8 +493,9 @@ const goTo = (path) => router.push(path)
 </script>
 
 <style scoped>
-* { box-sizing: border-box; }
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
+* {
+  box-sizing: border-box;
+}
 
 .page {
   overflow-x: hidden;
@@ -697,7 +518,6 @@ const goTo = (path) => router.push(path)
   font-size: 18px;
 }
 
-<<<<<<< HEAD
 .hero-text {
   margin-top: 16px;
 }
@@ -708,38 +528,8 @@ const goTo = (path) => router.push(path)
 }
 
 .hero-text p {
-  opacity: .8;
+  opacity: .85;
 }
-
-/* QUICK ACTIONS */
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 16px;
-  margin-top: 20px;
-}
-
-.qa {
-  background: white;
-  border-radius: 18px;
-  padding: 14px 8px;
-  border: none;
-  box-shadow: 0 8px 20px rgba(0,0,0,.12);
-}
-
-.qa span {
-  display: block;
-  font-size: 12px;
-}
-
-/* SEARCH */
-.search-section {
-  padding: 0 16px 24px;
-=======
-.hero-text { margin-top: 16px; }
-.hero-text h1 { font-size: 30px; margin: 6px 0; }
-.hero-text p { opacity: .85; }
 
 /* QUICK ACTIONS */
 .quick-actions {
@@ -758,40 +548,26 @@ const goTo = (path) => router.push(path)
   flex-direction: column;
   gap: 6px;
   align-items: center;
-  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .08);
   cursor: pointer;
 }
 
 .qa.active {
-  outline: 2px solid rgba(0,0,0,.2);
+  outline: 2px solid rgba(0, 0, 0, .2);
 }
 
-.qa span { font-size: 12px; opacity: .85; }
+.qa span {
+  font-size: 12px;
+  opacity: .85;
+}
 
 /* SEARCH */
 .search-section {
   margin: 16px;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 }
 
 .search-section input {
   width: 100%;
-<<<<<<< HEAD
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: none;
-  background: #f0f0f0;
-}
-
-/* BLOCKS */
-.block {
-  padding: 0 16px 32px;
-}
-
-.block h2 {
-  margin-bottom: 14px;
-  font-size: 18px;
-=======
   border: none;
   outline: none;
   padding: 12px 14px;
@@ -812,7 +588,7 @@ const goTo = (path) => router.push(path)
   border-radius: 999px;
   padding: 8px 14px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
 }
 
 .view-toggle button.active {
@@ -849,7 +625,6 @@ const goTo = (path) => router.push(path)
 
 .block h2 {
   margin: 0 0 10px;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 }
 
 /* MOODS */
@@ -861,12 +636,6 @@ const goTo = (path) => router.push(path)
 
 .mood {
   background: #000;
-<<<<<<< HEAD
-  color: white;
-  border-radius: 18px;
-  padding: 16px;
-  text-align: center;
-=======
   color: #fff;
   border-radius: 18px;
   padding: 18px 12px;
@@ -878,17 +647,15 @@ const goTo = (path) => router.push(path)
 }
 
 .mood.active {
-  outline: 2px solid rgba(255,255,255,.35);
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
+  outline: 2px solid rgba(255, 255, 255, .35);
 }
 
 /* TRENDING */
 .trending {
   display: flex;
-<<<<<<< HEAD
-  gap: 14px;
+  gap: 12px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
 
 .trending::-webkit-scrollbar {
@@ -897,72 +664,38 @@ const goTo = (path) => router.push(path)
 
 .trend-card {
   min-width: 160px;
-  background: white;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 6px 16px rgba(0,0,0,.1);
-=======
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-}
-
-.trending::-webkit-scrollbar { display: none; }
-
-.trend-card {
-  min-width: 160px;
   border-radius: 18px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .08);
   cursor: pointer;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 }
 
 .trend-card img {
   width: 100%;
-<<<<<<< HEAD
-  height: 120px;
-=======
   height: 110px;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   object-fit: cover;
 }
 
 .trend-info {
   padding: 10px;
-<<<<<<< HEAD
-  font-size: 13px;
-}
-
-/* CATEGORIES */
-.categories {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.categories button {
-  padding: 10px 14px;
-  border-radius: 16px;
-  border: none;
-  background: #eee;
-}
-
-.categories button.active {
-  background: #000;
-  color: white;
-=======
   display: flex;
   justify-content: space-between;
   gap: 10px;
   align-items: center;
 }
 
-.trend-info p { margin: 0; font-size: 13px; }
-.trend-info span { font-size: 12px; opacity: .8; }
+.trend-info p {
+  margin: 0;
+  font-size: 13px;
+}
 
-/* CATEGORIES CHIPS */
+.trend-info span {
+  font-size: 12px;
+  opacity: .8;
+}
+
+/* CATEGORIES */
 .categories {
   display: flex;
   flex-wrap: wrap;
@@ -975,7 +708,7 @@ const goTo = (path) => router.push(path)
   padding: 10px 14px;
   border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
 }
 
 .categories button.active {
@@ -999,7 +732,7 @@ const goTo = (path) => router.push(path)
   padding: 10px 14px;
   border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
 }
 
 .subfilters .chips button.active {
@@ -1036,7 +769,7 @@ const goTo = (path) => router.push(path)
   padding: 8px 12px;
   border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
 }
 
 .map-empty {
@@ -1051,30 +784,10 @@ const goTo = (path) => router.push(path)
   text-align: center;
   padding: 40px 20px;
   color: #666;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 }
 
 /* CTA */
 .cta-box {
-<<<<<<< HEAD
-  margin: 24px 16px;
-  padding: 24px;
-  background: #000;
-  color: white;
-  border-radius: 24px;
-  text-align: center;
-}
-
-.cta-box button {
-  margin-top: 14px;
-  padding: 14px 18px;
-  border-radius: 18px;
-  border: none;
-  background: white;
-  font-weight: 600;
-}
-</style>
-=======
   margin: 24px 16px 0;
   border-radius: 22px;
   padding: 18px;
@@ -1093,7 +806,8 @@ const goTo = (path) => router.push(path)
 }
 
 @media (min-width: 768px) {
-  .quick-actions { grid-template-columns: repeat(4, 1fr); }
+  .quick-actions {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 </style>
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)

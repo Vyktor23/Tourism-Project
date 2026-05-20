@@ -17,9 +17,9 @@
         ❤️
         <span>Favoritos</span>
       </div>
-      <div class="quick" @click="goTo('/ai')">
-        🤖
-        <span>Asistente</span>
+      <div class="quick" @click="goTo('/explore')">
+        🧭
+        <span>Explorar</span>
       </div>
       <div class="quick danger" @click="goTo('/emergencies')">
         🚨

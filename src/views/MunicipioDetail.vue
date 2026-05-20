@@ -3,6 +3,8 @@
 
     <!-- HERO -->
     <section class="hero">
+      <button class="back" type="button" @click="goBack">← Volver</button>
+
       <img
         v-if="municipio.image"
         :src="municipio.image"
@@ -20,8 +22,7 @@
       <p>{{ municipio.description }}</p>
     </section>
 
-<<<<<<< HEAD
-=======
+
     <!-- CLIMA (perfil general, NO pronóstico) -->
     <section v-if="climaHasData" class="clima">
       <div class="section-header">
@@ -83,33 +84,37 @@
       </div>
 
       <div class="event-grid">
-        <article v-for="e in eventosVisibles" :key="e.id" class="event-card">
+        <article
+          v-for="e in eventosVisibles"
+          :key="e.id"
+          class="event-card clickable-card"
+          role="button"
+          tabindex="0"
+          @click="goToEvento(e)"
+          @keydown.enter="goToEvento(e)"
+        >
+          <div v-if="e.imagen" class="card-media">
+            <img :src="e.imagen" :alt="e.title" loading="lazy" />
+          </div>
+
           <div class="event-top">
             <h3 class="event-title">{{ e.title }}</h3>
             <span v-if="e.when" class="event-when">{{ e.when }}</span>
           </div>
 
+          <span v-if="e.tipoLabel" class="tipo-pill">{{ e.tipoLabel }}</span>
           <p v-if="e.location" class="event-loc">📍 {{ e.location }}</p>
-          <p v-if="e.description" class="event-desc">{{ e.description }}</p>
+          <p v-if="e.description" class="event-desc clamp">{{ e.description }}</p>
 
           <div v-if="e.tags?.length" class="chips">
-            <span v-for="t in e.tags" :key="t" class="chip">{{ prettyTag(t) }}</span>
+            <span v-for="t in e.tags.slice(0, 3)" :key="t" class="chip">{{ prettyTag(t) }}</span>
           </div>
 
-          <a
-            v-if="e.source_url"
-            class="event-src"
-            :href="e.source_url"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Fuente
-          </a>
+          <span class="card-more">Ver detalle →</span>
         </article>
       </div>
     </section>
 
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
     <!-- GASTRONOMÍA -->
     <section v-if="gastronomia.length" class="gastronomia">
       <div class="section-header">
@@ -123,7 +128,11 @@
         <article
           v-for="p in gastronomia"
           :key="p.id || p.slug"
-          class="dish-card"
+          class="dish-card clickable-card"
+          role="button"
+          tabindex="0"
+          @click="goToPlato(p)"
+          @keydown.enter="goToPlato(p)"
         >
           <div class="dish-media" v-if="p.image_url">
             <img :src="p.image_url" :alt="p.name" loading="lazy" />
@@ -138,8 +147,7 @@
               <span v-if="p.is_typical" class="badge">Típico</span>
             </div>
 
-            <p v-if="p.description" class="dish-desc">{{ p.description }}</p>
-            <!-- <p v-if="p.note" class="dish-note">{{ p.note }}</p> -->
+            <p v-if="p.description" class="dish-desc clamp">{{ p.description }}</p>
 
             <div v-if="p.tags?.length" class="chips">
               <span
@@ -150,30 +158,13 @@
                 {{ prettyTag(t) }}
               </span>
             </div>
+
+            <span class="card-more">Ver detalle →</span>
           </div>
         </article>
       </div>
     </section>
 
-<<<<<<< HEAD
-    <!-- FILTROS -->
-    <section v-if="categories.length" class="filters">
-      <button
-        :class="{ active: !selectedCategory }"
-        @click="selectedCategory = null"
-      >
-        Todos
-      </button>
-
-      <button
-        v-for="category in categories"
-        :key="category"
-        :class="{ active: selectedCategory === category }"
-        @click="selectedCategory = category"
-      >
-        {{ category }}
-      </button>
-=======
     <!-- FILTROS (destinos del municipio) -->
     <section v-if="destinos.length" class="filters">
       <div class="filters-top">
@@ -218,7 +209,6 @@
           {{ category }}
         </button>
       </div>
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
     </section>
 
     <!-- DESTINOS -->
@@ -242,13 +232,11 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { getMunicipioBySlug } from '@/services/municipiosService'
 import { getDestinosByMunicipio } from '@/services/destinosService'
-<<<<<<< HEAD
-=======
-import { getEventosByMunicipioId } from '@/services/eventosService'
 
+import { getEventosByMunicipioId } from '@/services/eventosService'
+import { normalizeEvento } from '@/utils/eventos'
 import { normalizeForSearch } from '@/utils/text'
 import { useFavorites } from '@/composables/useFavorites'
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 
 import DestinationList from '@/components/DestinationList.vue'
 
@@ -257,9 +245,7 @@ const router = useRouter()
 
 const municipio = ref(null)
 const destinos = ref([])
-<<<<<<< HEAD
-const selectedCategory = ref(null)
-=======
+
 const eventos = ref([])
 const selectedCategory = ref(null)
 const destinoQuery = ref('')
@@ -267,7 +253,6 @@ const selectedDifficulty = ref(null)
 const onlyFavorites = ref(false)
 
 const { isFavorite } = useFavorites()
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 const loading = ref(true)
 
 // Tags llegan como text[]; esto los hace más presentables
@@ -275,6 +260,30 @@ const prettyTag = (tag) => {
   if (!tag) return ''
   const cleaned = String(tag).replace(/_/g, ' ').trim()
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+}
+
+const goBack = () => router.back()
+
+const goToPlato = (plato) => {
+  if (!plato?.slug || !municipio.value?.slug) return
+  router.push({
+    name: 'PlatoDetail',
+    params: {
+      municipioSlug: municipio.value.slug,
+      platoSlug: plato.slug,
+    },
+  })
+}
+
+const goToEvento = (evento) => {
+  if (!evento?.id || !municipio.value?.slug) return
+  router.push({
+    name: 'EventoDetail',
+    params: {
+      municipioSlug: municipio.value.slug,
+      eventoId: String(evento.id),
+    },
+  })
 }
 
 /* 👉 NAVEGACIÓN AL DESTINO (CORREGIDA) */
@@ -298,12 +307,10 @@ onMounted(async () => {
 
     // 2️⃣ Destinos del municipio
     destinos.value = await getDestinosByMunicipio(municipio.value.id)
-<<<<<<< HEAD
-=======
+
 
     // 3️⃣ Eventos culturales (si existen)
     eventos.value = await getEventosByMunicipioId(municipio.value.id)
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   } catch (error) {
     console.error('Error cargando municipio o destinos:', error)
   } finally {
@@ -311,59 +318,23 @@ onMounted(async () => {
   }
 })
 
-<<<<<<< HEAD
-=======
+
 /* EVENTOS */
-const parseISODate = (s) => {
-  if (!s) return null
-  const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? null : d
-}
-
-const formatDate = (d) => {
-  if (!d) return ''
-  return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
 const eventosVisibles = computed(() => {
   const list = Array.isArray(eventos.value) ? eventos.value : []
-  const normalized = list.map((e) => {
-    const start = parseISODate(e.start_date)
-    const end = parseISODate(e.end_date)
-    let when = ''
-
-    if (start && end) {
-      when = formatDate(start) + ' – ' + formatDate(end)
-    } else if (start) {
-      when = formatDate(start)
-    } else if (e.month_hint) {
-      when = String(e.month_hint)
-    }
-
-    return {
-      id: e.id,
-      title: e.title || 'Evento',
-      description: e.description || '',
-      location: e.location || '',
-      when,
-      tags: Array.isArray(e.tags) ? e.tags : [],
-      source_url: e.source_url || '',
-      _sortDate: start
-    }
-  })
-
-  // Orden: por fecha si existe, si no, al final
-  return normalized.sort((a, b) => {
-    const ad = a._sortDate
-    const bd = b._sortDate
-    if (ad && bd) return ad - bd
-    if (ad && !bd) return -1
-    if (!ad && bd) return 1
-    return a.title.localeCompare(b.title)
-  })
+  return list
+    .map(normalizeEvento)
+    .filter(Boolean)
+    .sort((a, b) => {
+      const ad = a._sortDate
+      const bd = b._sortDate
+      if (ad && bd) return ad - bd
+      if (ad && !bd) return -1
+      if (!ad && bd) return 1
+      return a.title.localeCompare(b.title)
+    })
 })
 
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 /* GASTRONOMÍA (municipio_platos -> platos) */
 const gastronomia = computed(() => {
   const rel = municipio.value?.municipio_platos || []
@@ -393,20 +364,7 @@ const gastronomiaDisclaimer = computed(() => {
   return ''
 })
 
-<<<<<<< HEAD
-/* CATEGORÍAS */
-const categories = computed(() => {
-  return [...new Set(
-    destinos.value.flatMap(d => d.categories || [])
-  )]
-})
 
-const filteredDestinos = computed(() => {
-  if (!selectedCategory.value) return destinos.value
-  return destinos.value.filter(d =>
-    d.categories?.includes(selectedCategory.value)
-  )
-=======
 /* CLIMA (jsonb en municipios.clima)
    Recomendación de estructura (flexible):
    {
@@ -559,7 +517,6 @@ const filteredDestinos = computed(() => {
   }
 
   return results
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 })
 </script>
 
@@ -568,14 +525,32 @@ const filteredDestinos = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  padding: 0 16px 100px;
 }
 
 /* HERO */
 .hero {
   position: relative;
   height: 280px;
-  border-radius: 16px;
+  margin: 0 -16px;
+  border-radius: 0 0 16px 16px;
   overflow: hidden;
+}
+
+.back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+
+  background: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 .hero-image {
@@ -644,8 +619,7 @@ const filteredDestinos = computed(() => {
   gap: 1rem;
 }
 
-<<<<<<< HEAD
-=======
+
 /* CLIMA */
 .clima {
   display: flex;
@@ -726,6 +700,56 @@ const filteredDestinos = computed(() => {
   gap: 14px;
 }
 
+.clickable-card {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.clickable-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-card:active {
+  transform: scale(0.99);
+}
+
+.card-more {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-media {
+  margin: -12px -14px 8px;
+  height: 120px;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+}
+
+.card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tipo-pill {
+  width: fit-content;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .event-card {
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 16px;
@@ -783,7 +807,6 @@ const filteredDestinos = computed(() => {
   width: fit-content;
 }
 
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 .dish-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -853,20 +876,13 @@ const filteredDestinos = computed(() => {
   line-height: 1.35;
 }
 
-<<<<<<< HEAD
-/* .dish-note {
-=======
+
 .dish-note {
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   margin: 0;
   font-size: 0.85rem;
   opacity: 0.72;
   line-height: 1.35;
-<<<<<<< HEAD
-} */
-=======
 }
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 
 .chips {
   display: flex;
@@ -885,9 +901,6 @@ const filteredDestinos = computed(() => {
 /* FILTROS */
 .filters {
   display: flex;
-<<<<<<< HEAD
-  gap: 0.75rem;
-=======
   flex-direction: column;
   gap: 12px;
 }
@@ -920,25 +933,16 @@ const filteredDestinos = computed(() => {
 .categories {
   display: flex;
   gap: 10px;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   flex-wrap: wrap;
 }
 
 .filters button {
-<<<<<<< HEAD
-  padding: 0.4rem 0.9rem;
-=======
   padding: 0.45rem 0.95rem;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   border-radius: 999px;
   border: 1px solid #ddd;
   background: white;
   cursor: pointer;
-<<<<<<< HEAD
-  font-size: 0.9rem;
-=======
   font-size: 0.92rem;
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   transition: all 0.2s ease;
 }
 
@@ -952,8 +956,7 @@ const filteredDestinos = computed(() => {
   border-color: #111;
 }
 
-<<<<<<< HEAD
-=======
+
 .filters .fav {
   background: #ffeef0;
   border-color: #ffd0d8;
@@ -965,7 +968,6 @@ const filteredDestinos = computed(() => {
   border-color: #ff2d55;
 }
 
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
 /* DESTINOS */
 .destinos {
   margin-top: 1rem;
