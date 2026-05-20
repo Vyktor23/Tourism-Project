@@ -17,74 +17,17 @@ export const getMunicipios = async () => {
 export const getMunicipioBySlug = async (slug) => {
   // Incluye gastronomía (relación municipio_platos -> platos)
   // Si todavía no creaste la columna platos.image_url, hacemos fallback automático.
-<<<<<<< HEAD
 
-  const selectWithImages = `
-    id,
-    name,
-    slug,
-    province,
-    departamento,
-    description,
-    image,
-    municipio_platos (
-      is_typical,
-      note,
-      sort_order,
-      platos (
-        id,
-        name,
-        slug,
-        description,
-        tags,
-        image_url
-      )
-    )
-  `
-
-  const selectNoImages = `
-    id,
-    name,
-    slug,
-    province,
-    departamento,
-    description,
-    image,
-    municipio_platos (
-      is_typical,
-      note,
-      sort_order,
-      platos (
-        id,
-        name,
-        slug,
-        description,
-        tags
-      )
-    )
-  `
-
-  let { data, error } = await supabase
-    .from('municipios')
-    .select(selectWithImages)
-    .eq('slug', slug)
-    .single()
-
-  // Postgres error típico: column "image_url" does not exist
-  if (error && /image_url/i.test(error.message || '')) {
-    ;({ data, error } = await supabase
-      .from('municipios')
-      .select(selectNoImages)
-      .eq('slug', slug)
-      .single())
-=======
   // Clima: se espera una columna municipios.clima (jsonb). Si aún no existe, también hacemos fallback.
 
-  const selectWithImagesAndClima = 'id,name,slug,province,departamento,description,image,clima,municipio_platos(is_typical,note,sort_order,platos(id,name,slug,description,tags,image_url))'
+  const platoFields =
+    'id,name,slug,description,tags,image_url,categoria,tiempo_preparacion,dificultad'
 
-  const selectNoImagesAndClima = 'id,name,slug,province,departamento,description,image,clima,municipio_platos(is_typical,note,sort_order,platos(id,name,slug,description,tags))'
+  const selectWithImagesAndClima = `id,name,slug,province,departamento,description,image,clima,municipio_platos(is_typical,note,sort_order,platos(${platoFields}))`
 
-  const selectWithImagesNoClima = 'id,name,slug,province,departamento,description,image,municipio_platos(is_typical,note,sort_order,platos(id,name,slug,description,tags,image_url))'
+  const selectNoImagesAndClima = `id,name,slug,province,departamento,description,image,clima,municipio_platos(is_typical,note,sort_order,platos(id,name,slug,description,tags))`
+
+  const selectWithImagesNoClima = `id,name,slug,province,departamento,description,image,municipio_platos(is_typical,note,sort_order,platos(${platoFields}))`
 
   const selectNoImagesNoClima = 'id,name,slug,province,departamento,description,image,municipio_platos(is_typical,note,sort_order,platos(id,name,slug,description,tags))'
 
@@ -126,7 +69,6 @@ export const getMunicipioBySlug = async (slug) => {
         .eq('slug', slug)
         .single())
     }
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   }
 
   if (error) throw error

@@ -23,24 +23,20 @@
     <section class="highlights">
       <div class="highlight">📍 +50 destinos</div>
       <div class="highlight">⭐ Referenciados por viajeros</div>
-      <div class="highlight">🤖 Recomendaciones inteligentes</div>
+      <div class="highlight">🗓️ Eventos y festividades</div>
     </section>
 
     <!-- SEARCH -->
-    <SearchBox
-      :destinations="destinos"
-      @search="handleSearch"
-      @select="goToDestination"
-    />
+    <SearchBox :destinations="destinos" @search="handleSearch" @select="goToDestination" />
 
     <!-- QUICK ACTIONS -->
     <section>
       <h2>¿Qué quieres hacer hoy?</h2>
       <div class="action-grid">
-        <div class="action">🌟 Sorpréndeme</div>
-        <div class="action">⏱️ Plan rápido</div>
-        <div class="action">📍 Cerca de mí</div>
-        <div class="action">🔥 Tendencias</div>
+        <div class="action" @click="goToExplore">🧭 Explorar</div>
+        <div class="action" @click="go('/favorites')">❤️ Mis favoritos</div>
+        <div class="action" @click="goToExplore">📍 Destinos</div>
+        <div class="action" @click="goToExplore">🔥 Tendencias</div>
       </div>
     </section>
 
@@ -48,12 +44,7 @@
     <section v-if="filteredResults.length">
       <h2>Resultados</h2>
       <div class="results-grid">
-        <div
-          v-for="place in filteredResults"
-          :key="place.id"
-          class="card"
-          @click="goToDestination(place)"
-        >
+        <div v-for="place in filteredResults" :key="place.id" class="card" @click="goToDestination(place)">
           <button class="favorite" @click.stop="toggleFavorite(place)">
             {{ isFavorite(place.id) ? '❤️' : '🤍' }}
           </button>
@@ -67,12 +58,7 @@
     <section>
       <h2>✨ Para ti hoy</h2>
       <div class="horizontal-list">
-        <div
-          v-for="dest in destinos.slice(1,5)"
-          :key="dest.id"
-          class="card premium"
-          @click="goToDestination(dest)"
-        >
+        <div v-for="dest in destinos.slice(1, 5)" :key="dest.id" class="card premium" @click="goToDestination(dest)">
           <img :src="dest.image" />
           <div class="overlay">
             <span>Recomendado</span>
@@ -91,17 +77,12 @@
         <div class="story">🏛️ Lugares con historia</div>
       </div>
     </section>
-    
+
     <!-- TRENDING -->
     <section>
       <h2>🔥 En tendencia</h2>
       <div class="horizontal-list">
-        <div
-          v-for="dest in destinos.slice(2,7)"
-          :key="dest.id"
-          class="card trend"
-          @click="goToDestination(dest)"
-        >
+        <div v-for="dest in destinos.slice(2, 7)" :key="dest.id" class="card trend" @click="goToDestination(dest)">
           <img :src="dest.image" />
           <p>{{ dest.name }}</p>
         </div>
@@ -141,13 +122,6 @@
       </div>
     </section>
 
-    <!-- AI TEASER -->
-    <section class="ai-section">
-      <h2>🤖 Tu asistente turístico</h2>
-      <p>Pronto podrás planear tu viaje con ayuda inteligente.</p>
-      <button class="cta soft">Muy pronto</button>
-    </section>
-
     <!-- FINAL CTA -->
     <section class="final-emotion">
       <h2>Tu próxima experiencia empieza aquí</h2>
@@ -163,7 +137,7 @@
       <div class="footer-links">
         <span @click="go('/favorites')">Favoritos</span>
         <span @click="go('/explore')">Explorar</span>
-        <span @click="go('/ai')">Asistente AI</span>
+        <span @click="go('/more')">Más opciones</span>
       </div>
       <small>© 2026 Turismo Santander</small>
     </footer>
@@ -199,11 +173,8 @@ const goToExplore = () => router.push('/explore')
 
 const goToDestination = (dest) => {
   router.push(
-<<<<<<< HEAD
-    `/explore/${dest.municipio.slug}/${dest.slug}`
-=======
+
     '/explore/' + dest.municipio.slug + '/' + dest.slug
->>>>>>> 0eca8fd (Destinos, eventos, filtros, platos y mas informacion adicional)
   )
 }
 
@@ -280,9 +251,17 @@ onMounted(async () => {
 }
 
 @keyframes pulse {
-  0% { opacity: .6 }
-  50% { opacity: 1 }
-  100% { opacity: .6 }
+  0% {
+    opacity: .6
+  }
+
+  50% {
+    opacity: 1
+  }
+
+  100% {
+    opacity: .6
+  }
 }
 
 /* HIGHLIGHTS */
@@ -315,6 +294,7 @@ onMounted(async () => {
   border-radius: 18px;
   text-align: center;
   font-weight: 600;
+  cursor: pointer;
 }
 
 /* CARDS */
@@ -323,7 +303,7 @@ onMounted(async () => {
   min-width: 160px;
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
 }
 
 .card img {
@@ -356,7 +336,7 @@ onMounted(async () => {
 .card.premium .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,.7), transparent);
+  background: linear-gradient(to top, rgba(0, 0, 0, .7), transparent);
   color: #fff;
   padding: 14px;
   display: flex;
@@ -429,15 +409,6 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-/* AI */
-.ai-section {
-  text-align: center;
-  padding: 24px;
-  background: radial-gradient(circle, #111, #000);
-  color: #fff;
-  border-radius: 20px;
-}
-
 /* CTA */
 .final-emotion {
   text-align: center;
@@ -455,7 +426,7 @@ onMounted(async () => {
 }
 
 .cta.glow {
-  box-shadow: 0 0 20px rgba(0,0,0,.4);
+  box-shadow: 0 0 20px rgba(0, 0, 0, .4);
 }
 
 /* FOOTER */
