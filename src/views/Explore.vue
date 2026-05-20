@@ -62,6 +62,12 @@
               locked: !dept.available,
             }"
             :disabled="!dept.available"
+            :aria-pressed="dept.available && selectedDepartamento?.nombre === dept.nombre"
+            :title="
+              selectedDepartamento?.nombre === dept.nombre
+                ? 'Clic de nuevo para volver a Colombia'
+                : undefined
+            "
             @click="selectDepartamento(dept)"
           >
             <span class="dept-name">{{ dept.nombre }}</span>
@@ -344,7 +350,7 @@
           <span class="hint-icon">🗺️</span>
           <h3>Selecciona un departamento</h3>
           <p>
-            Elige <strong>Santander</strong> (u otro disponible) arriba para ver provincias,
+            Elige <strong>un departamento</strong> para ver sus provincias,
             municipios y destinos turísticos.
           </p>
           <button
@@ -531,6 +537,12 @@ const scopedDestinos = computed(() => {
 
 const selectDepartamento = (dept) => {
   if (!dept?.available) return
+
+  if (selectedDepartamento.value?.nombre === dept.nombre) {
+    clearDepartamento()
+    return
+  }
+
   selectedDepartamento.value = dept
   selectedProvince.value = null
   searchQuery.value = ''

@@ -165,16 +165,26 @@
       </div>
     </section>
 
-    <!-- FILTROS (destinos del municipio) -->
-    <section v-if="destinos.length" class="filters">
+    <!-- DESTINOS DEL MUNICIPIO -->
+    <section v-if="destinos.length" ref="destinosBlock" class="destinos-section">
+      <div class="section-header">
+        <h2>Destinos turísticos</h2>
+        <p class="section-sub">Lugares y experiencias en {{ municipio.name }}</p>
+      </div>
+
+      <div class="filters">
       <div class="filters-top">
-        <input
+        <SearchBox
           v-model="destinoQuery"
-          type="text"
-          placeholder="Buscar destinos en este municipio..."
+          mode="destinos"
+          :destinations="destinos"
+          :placeholder="destinosSearchPlaceholder"
+          @select="onDestinoSearchSelect"
         />
 
-        <button v-if="hasDestinosFilters" class="clear" @click="resetDestinosFilters">Limpiar</button>
+        <button v-if="hasDestinosFilters" type="button" class="clear" @click="resetDestinosFilters">
+          Limpiar filtros
+        </button>
       </div>
 
       <div v-if="difficultyOptions.length" class="chips-row">
@@ -209,14 +219,41 @@
           {{ category }}
         </button>
       </div>
-    </section>
+      </div>
 
-    <!-- DESTINOS -->
-    <section class="destinos">
+      <p class="destinos-count">
+        {{ destinosPagState.total }} destino{{ destinosPagState.total === 1 ? '' : 's' }}
+        <span v-if="destinosPagState.hasPagination && !destinosPagState.showAll">
+          · página {{ destinosPagState.page }} de {{ destinosPagState.totalPages }}
+        </span>
+        <span v-else-if="destinosPagState.showAll"> · ver todo</span>
+      </p>
+
       <DestinationList
-        :destinations="filteredDestinos"
+        v-if="displayDestinos.length"
+        :destinations="displayDestinos"
+        variant="grid"
         @select="goToDestination"
-        />
+      />
+
+      <div v-else class="empty-destinos">
+        <p>No hay destinos con esos filtros.</p>
+      </div>
+
+      <ListPagination
+        v-if="destinosPagState.hasPagination"
+        :page="destinosPagState.page"
+        :total-pages="destinosPagState.totalPages"
+        :total="destinosPagState.total"
+        :range-from="destinosPagState.rangeFrom"
+        :range-to="destinosPagState.rangeTo"
+        :show-all="destinosPagState.showAll"
+        :page-size="LIST_PAGE_SIZE"
+        @prev="onDestinosPrev"
+        @next="onDestinosNext"
+        @view-all="onDestinosViewAll"
+        @view-paged="onDestinosViewPaged"
+      />
     </section>
 
   </div>
@@ -237,8 +274,13 @@ import { getEventosByMunicipioId } from '@/services/eventosService'
 import { normalizeEvento } from '@/utils/eventos'
 import { normalizeForSearch } from '@/utils/text'
 import { useFavorites } from '@/composables/useFavorites'
+import { usePagination } from '@/composables/usePagination'
 
 import DestinationList from '@/components/DestinationList.vue'
+import SearchBox from '@/components/SearchBox.vue'
+import ListPagination from '@/components/ListPagination.vue'
+
+const LIST_PAGE_SIZE = 12
 
 const route = useRoute()
 const router = useRouter()
@@ -254,6 +296,7 @@ const onlyFavorites = ref(false)
 
 const { isFavorite } = useFavorites()
 const loading = ref(true)
+const destinosBlock = ref(null)
 
 // Tags llegan como text[]; esto los hace más presentables
 const prettyTag = (tag) => {
@@ -473,11 +516,22 @@ const hasDestinosFilters = computed(() => {
   return Boolean(destinoQuery.value || selectedCategory.value || selectedDifficulty.value || onlyFavorites.value)
 })
 
+const destinosSearchPlaceholder = computed(() =>
+  municipio.value?.name
+    ? `Buscar destinos en ${municipio.value.name}...`
+    : 'Buscar destinos...',
+)
+
 const resetDestinosFilters = () => {
   destinoQuery.value = ''
   selectedCategory.value = null
   selectedDifficulty.value = null
   onlyFavorites.value = false
+  destinosPagination.viewPaged()
+}
+
+const onDestinoSearchSelect = ({ item }) => {
+  if (item) goToDestination(item)
 }
 
 const toggleDifficulty = (d) => {
@@ -518,6 +572,44 @@ const filteredDestinos = computed(() => {
 
   return results
 })
+
+const destinosPagination = usePagination(filteredDestinos, LIST_PAGE_SIZE)
+
+const displayDestinos = computed(() => destinosPagination.displayItems.value)
+
+const destinosPagState = computed(() => ({
+  page: destinosPagination.page.value,
+  totalPages: destinosPagination.totalPages.value,
+  total: destinosPagination.total.value,
+  rangeFrom: destinosPagination.rangeFrom.value,
+  rangeTo: destinosPagination.rangeTo.value,
+  showAll: destinosPagination.showAll.value,
+  hasPagination: destinosPagination.hasPagination.value,
+}))
+
+const scrollToDestinos = () => {
+  destinosBlock.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+const onDestinosPrev = () => {
+  destinosPagination.prevPage()
+  scrollToDestinos()
+}
+
+const onDestinosNext = () => {
+  destinosPagination.nextPage()
+  scrollToDestinos()
+}
+
+const onDestinosViewAll = () => {
+  destinosPagination.viewAll()
+  scrollToDestinos()
+}
+
+const onDestinosViewPaged = () => {
+  destinosPagination.viewPaged()
+  scrollToDestinos()
+}
 </script>
 
 <style scoped>
@@ -905,28 +997,47 @@ const filteredDestinos = computed(() => {
   gap: 12px;
 }
 
-.filters-top {
+.destinos-section {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.filters-top input {
-  flex: 1;
-  border: none;
-  outline: none;
-  padding: 12px 14px;
+.destinos-count {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #666;
+}
+
+.empty-destinos {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #666;
+  background: rgba(0, 0, 0, 0.02);
   border-radius: 16px;
-  background: #f1f1f1;
+}
+
+.filters-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.filters-top :deep(.search-box) {
+  width: 100%;
+  margin-bottom: 0;
 }
 
 .filters-top .clear {
-  border: none;
+  align-self: flex-end;
+  border: 1px solid #eee;
   background: #fff;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 999px;
   cursor: pointer;
-  border: 1px solid #eee;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .chips-row,
@@ -966,11 +1077,6 @@ const filteredDestinos = computed(() => {
   background: #ff2d55;
   color: #fff;
   border-color: #ff2d55;
-}
-
-/* DESTINOS */
-.destinos {
-  margin-top: 1rem;
 }
 
 /* LOADING */
