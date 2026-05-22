@@ -1,10 +1,10 @@
 import { supabase } from '@/data/clientSupabase.js'
 
 const EVENTO_LIST =
-  'id, municipio_id, title, description, location, start_date, end_date, month_hint, tags, source_url, imagen, tipo, destacado, hora_inicio, hora_fin, costo, organizador'
+  'id, municipio_id, title, description, location, start_date, end_date, month_hint, tags, source_url, imagen, gallery, tipo, destacado, hora_inicio, hora_fin, costo, organizador'
 
 const EVENTO_FULL =
-  'id, municipio_id, title, description, location, start_date, end_date, month_hint, tags, source_url, hora_inicio, hora_fin, imagen, costo, organizador, contacto, tipo, destacado, created_at'
+  'id, municipio_id, title, description, location, start_date, end_date, month_hint, tags, source_url, hora_inicio, hora_fin, imagen, gallery, costo, organizador, contacto, tipo, destacado, created_at'
 
 const EVENTO_BASIC =
   'id, municipio_id, title, description, location, start_date, end_date, month_hint, tags, source_url'
@@ -29,7 +29,7 @@ export const getEventosByMunicipioId = async (municipioId) => {
     .eq('municipio_id', municipioId)
     .order('start_date', { ascending: true, nullsFirst: false })
 
-  if (error && isMissingColumn(String(error.message || ''), 'imagen')) {
+  if (error && (isMissingColumn(String(error.message || ''), 'imagen') || isMissingColumn(String(error.message || ''), 'gallery'))) {
     ;({ data, error } = await supabase
       .from('eventos')
       .select(EVENTO_BASIC)
@@ -60,14 +60,22 @@ export const getEventoById = async (id) => {
 
   if (error) {
     const msg = String(error.message || '')
-    if (isMissingColumn(msg, 'contacto') || isMissingColumn(msg, 'imagen')) {
+    if (
+      isMissingColumn(msg, 'contacto') ||
+      isMissingColumn(msg, 'imagen') ||
+      isMissingColumn(msg, 'gallery')
+    ) {
       ;({ data, error } = await supabase
         .from('eventos')
         .select(EVENTO_LIST)
         .eq('id', id)
         .single())
     }
-    if (error && isMissingColumn(String(error.message || ''), 'imagen')) {
+    if (
+      error &&
+      (isMissingColumn(String(error.message || ''), 'imagen') ||
+        isMissingColumn(String(error.message || ''), 'gallery'))
+    ) {
       ;({ data, error } = await supabase
         .from('eventos')
         .select(EVENTO_BASIC)

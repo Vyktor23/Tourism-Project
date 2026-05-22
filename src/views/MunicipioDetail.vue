@@ -12,8 +12,8 @@
 
         <div class="hero-media">
           <img
-            v-if="municipio.image"
-            :src="municipio.image"
+            v-if="heroImage"
+            :src="heroImage"
             :alt="municipio.name"
             class="hero-image"
           />
@@ -43,11 +43,11 @@
             <span>Destinos</span>
           </div>
           <div class="stat">
-            <strong>{{ eventosVisibles.length }}</strong>
+            <strong>{{ eventosAll.length }}</strong>
             <span>Eventos</span>
           </div>
           <div class="stat">
-            <strong>{{ gastronomia.length }}</strong>
+            <strong>{{ platosAll.length }}</strong>
             <span>Gastronomia</span>
           </div>
         </div>
@@ -64,7 +64,7 @@
           🌤️<span>Clima</span>
         </button>
         <button
-          v-if="eventosVisibles.length"
+          v-if="eventosAll.length"
           type="button"
           class="qa"
           @click="scrollToSection(eventosBlock)"
@@ -72,7 +72,7 @@
           🎭<span>Eventos</span>
         </button>
         <button
-          v-if="gastronomia.length"
+          v-if="platosAll.length"
           type="button"
           class="qa"
           @click="scrollToSection(gastronomiaBlock)"
@@ -98,6 +98,22 @@
         <article class="content-card">
           <p>{{ municipio.description }}</p>
         </article>
+      </section>
+
+      <!-- FOTOS Y VIDEOS -->
+      <section v-if="hasMunicipioMedia" class="block">
+        <div class="block-head">
+          <h2>Fotos y videos</h2>
+          <p class="block-sub">{{ municipioMediaSummary }}</p>
+        </div>
+        <div class="content-card gallery-wrap">
+          <MediaGallery
+            title=""
+            :alt-prefix="municipio.name"
+            :image-sources="municipioMedia.imageSources"
+            :video-sources="municipioMedia.videoSources"
+          />
+        </div>
       </section>
 
       <!-- CLIMA -->
@@ -152,91 +168,330 @@
       </section>
 
       <!-- EVENTOS -->
-      <section v-if="eventosVisibles.length" ref="eventosBlock" class="block eventos">
+      <section v-if="eventosAll.length" ref="eventosBlock" class="block eventos">
         <div class="block-head">
           <h2>Eventos culturales</h2>
           <p class="block-sub">Fechas segun fuente. Algunos eventos solo publican mes o temporada.</p>
         </div>
 
-        <div class="card-grid event-grid">
-        <article
-          v-for="e in eventosVisibles"
-          :key="e.id"
-          class="event-card clickable-card"
-          role="button"
-          tabindex="0"
-          @click="goToEvento(e)"
-          @keydown.enter="goToEvento(e)"
-        >
-          <div v-if="e.imagen" class="card-media">
-            <img :src="e.imagen" :alt="e.title" loading="lazy" />
+        <div class="filters">
+          <div class="filters-top">
+            <div class="search-inline">
+              <span class="search-icon" aria-hidden="true">🔍</span>
+              <input
+                v-model="eventoQuery"
+                type="search"
+                placeholder="Buscar eventos..."
+                autocomplete="off"
+              />
+              <button
+                v-if="eventoQuery"
+                type="button"
+                class="search-clear"
+                aria-label="Limpiar busqueda"
+                @click="eventoQuery = ''"
+              >
+                ✕
+              </button>
+            </div>
+            <button
+              v-if="hasEventosFilters"
+              type="button"
+              class="clear"
+              @click="resetEventosFilters"
+            >
+              Limpiar filtros
+            </button>
           </div>
 
-          <div class="event-top">
-            <h3 class="event-title">{{ e.title }}</h3>
-            <span v-if="e.when" class="event-when">{{ e.when }}</span>
+          <div v-if="eventoTipoOptions.length" class="categories">
+            <button
+              type="button"
+              :class="{ active: !selectedEventoTipo }"
+              @click="selectedEventoTipo = null"
+            >
+              Todos los tipos
+            </button>
+            <button
+              v-for="tipo in eventoTipoOptions"
+              :key="tipo"
+              type="button"
+              :class="{ active: selectedEventoTipo === tipo }"
+              @click="toggleEventoTipo(tipo)"
+            >
+              {{ tipoEventoLabel(tipo) }}
+            </button>
           </div>
 
-          <span v-if="e.tipoLabel" class="tipo-pill">{{ e.tipoLabel }}</span>
-          <p v-if="e.location" class="event-loc">📍 {{ e.location }}</p>
-          <p v-if="e.description" class="event-desc clamp">{{ e.description }}</p>
-
-          <div v-if="e.tags?.length" class="chips">
-            <span v-for="t in e.tags.slice(0, 3)" :key="t" class="chip">{{ prettyTag(t) }}</span>
+          <div class="chips-row">
+            <button
+              type="button"
+              class="fav"
+              :class="{ active: onlyEventosDestacados }"
+              @click="onlyEventosDestacados = !onlyEventosDestacados"
+            >
+              ⭐ Solo destacados
+            </button>
           </div>
 
-          <span class="card-more">Ver detalle →</span>
-        </article>
-      </div>
-    </section>
+          <div v-if="eventoTagOptions.length" class="categories">
+            <button
+              type="button"
+              :class="{ active: !selectedEventoTag }"
+              @click="selectedEventoTag = null"
+            >
+              Todas las etiquetas
+            </button>
+            <button
+              v-for="tag in eventoTagOptions"
+              :key="tag"
+              type="button"
+              :class="{ active: selectedEventoTag === tag }"
+              @click="toggleEventoTag(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
+        </div>
+
+        <p class="section-count">
+          {{ eventosPagState.total }} evento{{ eventosPagState.total === 1 ? '' : 's' }}
+          <span v-if="eventosPagState.hasPagination && !eventosPagState.showAll">
+            · pagina {{ eventosPagState.page }} de {{ eventosPagState.totalPages }}
+          </span>
+          <span v-else-if="eventosPagState.showAll"> · ver todo</span>
+        </p>
+
+        <div v-if="displayEventos.length" class="card-grid event-grid">
+          <article
+            v-for="e in displayEventos"
+            :key="e.id"
+            class="event-card clickable-card"
+            role="button"
+            tabindex="0"
+            @click="goToEvento(e)"
+            @keydown.enter="goToEvento(e)"
+          >
+            <div v-if="e.imagen" class="card-media">
+              <img :src="e.imagen" :alt="e.title" loading="lazy" />
+            </div>
+
+            <div class="event-top">
+              <h3 class="event-title">{{ e.title }}</h3>
+              <span v-if="e.when" class="event-when">{{ e.when }}</span>
+            </div>
+
+            <span v-if="e.destacado" class="tipo-pill highlight">Destacado</span>
+            <span v-if="e.tipoLabel" class="tipo-pill">{{ e.tipoLabel }}</span>
+            <p v-if="e.location" class="event-loc">📍 {{ e.location }}</p>
+            <p v-if="e.description" class="event-desc clamp">{{ e.description }}</p>
+
+            <div v-if="e.tags?.length" class="chips">
+              <span v-for="t in e.tags.slice(0, 3)" :key="t" class="chip">{{ prettyTag(t) }}</span>
+            </div>
+
+            <span class="card-more">Ver detalle →</span>
+          </article>
+        </div>
+
+        <div v-else class="empty-section">
+          <p>No hay eventos con esos filtros.</p>
+          <button
+            v-if="hasEventosFilters"
+            type="button"
+            class="btn-secondary"
+            @click="resetEventosFilters"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+
+        <ListPagination
+          v-if="eventosPagState.hasPagination"
+          :page="eventosPagState.page"
+          :total-pages="eventosPagState.totalPages"
+          :total="eventosPagState.total"
+          :range-from="eventosPagState.rangeFrom"
+          :range-to="eventosPagState.rangeTo"
+          :show-all="eventosPagState.showAll"
+          :page-size="EVENTOS_PAGE_SIZE"
+          @prev="onEventosPrev"
+          @next="onEventosNext"
+          @view-all="onEventosViewAll"
+          @view-paged="onEventosViewPaged"
+        />
+      </section>
 
       <!-- GASTRONOMIA -->
-      <section v-if="gastronomia.length" ref="gastronomiaBlock" class="block gastronomia">
+      <section v-if="platosAll.length" ref="gastronomiaBlock" class="block gastronomia">
         <div class="block-head">
           <h2>Gastronomia</h2>
           <p v-if="gastronomiaDisclaimer" class="block-sub">{{ gastronomiaDisclaimer }}</p>
         </div>
 
-        <div class="card-grid dish-grid">
-        <article
-          v-for="p in gastronomia"
-          :key="p.id || p.slug"
-          class="dish-card clickable-card"
-          role="button"
-          tabindex="0"
-          @click="goToPlato(p)"
-          @keydown.enter="goToPlato(p)"
-        >
-          <div class="dish-media" v-if="p.image_url">
-            <img :src="p.image_url" :alt="p.name" loading="lazy" />
-          </div>
-          <div class="dish-media placeholder" v-else aria-hidden="true">
-            🍽️
-          </div>
-
-          <div class="dish-body">
-            <div class="dish-top">
-              <h3 class="dish-title">{{ p.name }}</h3>
-              <span v-if="p.is_typical" class="badge">Típico</span>
-            </div>
-
-            <p v-if="p.description" class="dish-desc clamp">{{ p.description }}</p>
-
-            <div v-if="p.tags?.length" class="chips">
-              <span
-                v-for="t in p.tags"
-                :key="t"
-                class="chip"
+        <div class="filters">
+          <div class="filters-top">
+            <div class="search-inline">
+              <span class="search-icon" aria-hidden="true">🔍</span>
+              <input
+                v-model="platoQuery"
+                type="search"
+                placeholder="Buscar platos..."
+                autocomplete="off"
+              />
+              <button
+                v-if="platoQuery"
+                type="button"
+                class="search-clear"
+                aria-label="Limpiar busqueda"
+                @click="platoQuery = ''"
               >
-                {{ prettyTag(t) }}
-              </span>
+                ✕
+              </button>
+            </div>
+            <button
+              v-if="hasPlatosFilters"
+              type="button"
+              class="clear"
+              @click="resetPlatosFilters"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div v-if="platoCategoriaOptions.length" class="categories">
+            <button
+              type="button"
+              :class="{ active: !selectedPlatoCategoria }"
+              @click="selectedPlatoCategoria = null"
+            >
+              Todas las categorias
+            </button>
+            <button
+              v-for="cat in platoCategoriaOptions"
+              :key="cat"
+              type="button"
+              :class="{ active: selectedPlatoCategoria === cat }"
+              @click="togglePlatoCategoria(cat)"
+            >
+              {{ cat }}
+            </button>
+          </div>
+
+          <div class="chips-row">
+            <button
+              type="button"
+              :class="{ active: selectedPlatoTypical === 'all' }"
+              @click="selectedPlatoTypical = 'all'"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              :class="{ active: selectedPlatoTypical === 'typical' }"
+              @click="selectedPlatoTypical = 'typical'"
+            >
+              Tipicos del municipio
+            </button>
+            <button
+              type="button"
+              :class="{ active: selectedPlatoTypical === 'regional' }"
+              @click="selectedPlatoTypical = 'regional'"
+            >
+              Referencia regional
+            </button>
+          </div>
+
+          <div v-if="platoTagOptions.length" class="categories">
+            <button
+              type="button"
+              :class="{ active: !selectedPlatoTag }"
+              @click="selectedPlatoTag = null"
+            >
+              Todas las etiquetas
+            </button>
+            <button
+              v-for="tag in platoTagOptions"
+              :key="tag"
+              type="button"
+              :class="{ active: selectedPlatoTag === tag }"
+              @click="togglePlatoTag(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
+        </div>
+
+        <p class="section-count">
+          {{ platosPagState.total }} plato{{ platosPagState.total === 1 ? '' : 's' }}
+          <span v-if="platosPagState.hasPagination && !platosPagState.showAll">
+            · pagina {{ platosPagState.page }} de {{ platosPagState.totalPages }}
+          </span>
+          <span v-else-if="platosPagState.showAll"> · ver todo</span>
+        </p>
+
+        <div v-if="displayPlatos.length" class="card-grid dish-grid">
+          <article
+            v-for="p in displayPlatos"
+            :key="p.id || p.slug"
+            class="dish-card clickable-card"
+            role="button"
+            tabindex="0"
+            @click="goToPlato(p)"
+            @keydown.enter="goToPlato(p)"
+          >
+            <div v-if="p.image_url" class="dish-media">
+              <img :src="p.image_url" :alt="p.name" loading="lazy" />
+            </div>
+            <div v-else class="dish-media placeholder" aria-hidden="true">
+              🍽️
             </div>
 
-            <span class="card-more">Ver detalle →</span>
-          </div>
-        </article>
-      </div>
-    </section>
+            <div class="dish-body">
+              <div class="dish-top">
+                <h3 class="dish-title">{{ p.name }}</h3>
+                <span v-if="p.is_typical" class="badge">Tipico</span>
+              </div>
+
+              <p v-if="p.categoria" class="dish-cat">{{ p.categoria }}</p>
+              <p v-if="p.description" class="dish-desc clamp">{{ p.description }}</p>
+
+              <div v-if="p.tags?.length" class="chips">
+                <span v-for="t in p.tags" :key="t" class="chip">{{ prettyTag(t) }}</span>
+              </div>
+
+              <span class="card-more">Ver detalle →</span>
+            </div>
+          </article>
+        </div>
+
+        <div v-else class="empty-section">
+          <p>No hay platos con esos filtros.</p>
+          <button
+            v-if="hasPlatosFilters"
+            type="button"
+            class="btn-secondary"
+            @click="resetPlatosFilters"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+
+        <ListPagination
+          v-if="platosPagState.hasPagination"
+          :page="platosPagState.page"
+          :total-pages="platosPagState.totalPages"
+          :total="platosPagState.total"
+          :range-from="platosPagState.rangeFrom"
+          :range-to="platosPagState.rangeTo"
+          :show-all="platosPagState.showAll"
+          :page-size="PLATOS_PAGE_SIZE"
+          @prev="onPlatosPrev"
+          @next="onPlatosNext"
+          @view-all="onPlatosViewAll"
+          @view-paged="onPlatosViewPaged"
+        />
+      </section>
 
       <!-- DESTINOS -->
       <section v-if="destinos.length" ref="destinosBlock" class="block destinos-section">
@@ -364,7 +619,7 @@ import { getMunicipioBySlug } from '@/services/municipiosService'
 import { getDestinosByMunicipio } from '@/services/destinosService'
 
 import { getEventosByMunicipioId } from '@/services/eventosService'
-import { normalizeEvento } from '@/utils/eventos'
+import { normalizeEvento, tipoEventoLabel } from '@/utils/eventos'
 import { normalizeForSearch } from '@/utils/text'
 import { useFavorites } from '@/composables/useFavorites'
 import { usePagination } from '@/composables/usePagination'
@@ -373,6 +628,8 @@ import DestinationList from '@/components/DestinationList.vue'
 import SearchBox from '@/components/SearchBox.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import BackButton from '@/components/BackButton.vue'
+import MediaGallery from '@/components/MediaGallery.vue'
+import { buildEntityMedia } from '@/utils/media'
 import {
   locationPathLine,
   provinceLabel,
@@ -381,6 +638,8 @@ import {
 import { AppRoute } from '@/router/links.js'
 
 const LIST_PAGE_SIZE = 12
+const EVENTOS_PAGE_SIZE = 6
+const PLATOS_PAGE_SIZE = 6
 
 const route = useRoute()
 const router = useRouter()
@@ -389,6 +648,16 @@ const municipio = ref(null)
 const destinos = ref([])
 
 const eventos = ref([])
+const eventoQuery = ref('')
+const selectedEventoTipo = ref(null)
+const selectedEventoTag = ref(null)
+const onlyEventosDestacados = ref(false)
+
+const platoQuery = ref('')
+const selectedPlatoCategoria = ref(null)
+const selectedPlatoTypical = ref('all')
+const selectedPlatoTag = ref(null)
+
 const selectedCategory = ref(null)
 const destinoQuery = ref('')
 const selectedDifficulty = ref(null)
@@ -408,6 +677,26 @@ const municipioPathLine = computed(() =>
 )
 
 const muniProvinceLabel = computed(() => provinceLabel(municipio.value))
+
+const municipioMedia = computed(() =>
+  buildEntityMedia(municipio.value, {
+    imageFields: ['image'],
+    galleryField: 'gallery',
+    videoFields: [municipio.value?.info],
+  }),
+)
+
+const heroImage = computed(() => municipioMedia.value.heroImage)
+
+const hasMunicipioMedia = computed(() => municipioMedia.value.totalCount > 0)
+
+const municipioMediaSummary = computed(() => {
+  const { imageCount, videoCount } = municipioMedia.value
+  const parts = []
+  if (imageCount) parts.push(`${imageCount} foto${imageCount === 1 ? '' : 's'}`)
+  if (videoCount) parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`)
+  return parts.join(' · ') || 'Galeria del municipio'
+})
 
 const goToExplore = () => router.push(AppRoute.explorar())
 
@@ -462,7 +751,7 @@ onMounted(async () => {
 
 
 /* EVENTOS */
-const eventosVisibles = computed(() => {
+const eventosAll = computed(() => {
   const list = Array.isArray(eventos.value) ? eventos.value : []
   return list
     .map(normalizeEvento)
@@ -477,8 +766,125 @@ const eventosVisibles = computed(() => {
     })
 })
 
-/* GASTRONOMÍA (municipio_platos -> platos) */
-const gastronomia = computed(() => {
+const eventoTipoOptions = computed(() => {
+  const set = new Set()
+  for (const e of eventosAll.value) {
+    if (e.tipo) set.add(e.tipo)
+  }
+  return [...set].sort((a, b) => tipoEventoLabel(a).localeCompare(tipoEventoLabel(b)))
+})
+
+const eventoTagOptions = computed(() => {
+  const set = new Set()
+  for (const e of eventosAll.value) {
+    for (const t of e.tags || []) {
+      const label = prettyTag(t)
+      if (label) set.add(label)
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b))
+})
+
+const hasEventosFilters = computed(() =>
+  Boolean(
+    eventoQuery.value ||
+      selectedEventoTipo.value ||
+      selectedEventoTag.value ||
+      onlyEventosDestacados.value,
+  ),
+)
+
+const resetEventosFilters = () => {
+  eventoQuery.value = ''
+  selectedEventoTipo.value = null
+  selectedEventoTag.value = null
+  onlyEventosDestacados.value = false
+  eventosPagination.viewPaged()
+}
+
+const toggleEventoTipo = (tipo) => {
+  selectedEventoTipo.value = selectedEventoTipo.value === tipo ? null : tipo
+}
+
+const toggleEventoTag = (tag) => {
+  selectedEventoTag.value = selectedEventoTag.value === tag ? null : tag
+}
+
+const filteredEventos = computed(() => {
+  let results = eventosAll.value
+
+  const q = normalizeForSearch(eventoQuery.value)
+  if (q) {
+    results = results.filter((e) => {
+      const hay = [
+        e.title,
+        e.description,
+        e.location,
+        e.tipoLabel,
+        ...(e.tags || []),
+      ]
+        .filter(Boolean)
+        .join(' | ')
+      return normalizeForSearch(hay).includes(q)
+    })
+  }
+
+  if (selectedEventoTipo.value) {
+    results = results.filter((e) => e.tipo === selectedEventoTipo.value)
+  }
+
+  if (onlyEventosDestacados.value) {
+    results = results.filter((e) => !!e.destacado)
+  }
+
+  if (selectedEventoTag.value) {
+    results = results.filter((e) =>
+      (e.tags || []).some((t) => prettyTag(t) === selectedEventoTag.value),
+    )
+  }
+
+  return results
+})
+
+const eventosPagination = usePagination(filteredEventos, EVENTOS_PAGE_SIZE)
+const displayEventos = computed(() => eventosPagination.displayItems.value)
+
+const eventosPagState = computed(() => ({
+  page: eventosPagination.page.value,
+  totalPages: eventosPagination.totalPages.value,
+  total: eventosPagination.total.value,
+  rangeFrom: eventosPagination.rangeFrom.value,
+  rangeTo: eventosPagination.rangeTo.value,
+  showAll: eventosPagination.showAll.value,
+  hasPagination: eventosPagination.hasPagination.value,
+}))
+
+const scrollToEventos = () => {
+  eventosBlock.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+const onEventosPrev = () => {
+  eventosPagination.prevPage()
+  scrollToEventos()
+}
+
+const onEventosNext = () => {
+  eventosPagination.nextPage()
+  scrollToEventos()
+}
+
+const onEventosViewAll = () => {
+  eventosPagination.viewAll()
+  scrollToEventos()
+}
+
+const onEventosViewPaged = () => {
+  eventosPagination.viewPaged()
+  scrollToEventos()
+}
+
+/* GASTRONOMIA (municipio_platos -> platos) */
+const platosAll = computed(() => {
   const rel = municipio.value?.municipio_platos || []
   return rel
     .slice()
@@ -487,18 +893,136 @@ const gastronomia = computed(() => {
       ...(r?.platos || {}),
       is_typical: !!r?.is_typical,
       note: r?.note || null,
-      sort_order: r?.sort_order ?? 0
+      sort_order: r?.sort_order ?? 0,
     }))
 })
 
-// Si hay mezcla de típicos vs. referencia regional, mostramos un aviso pequeño.
+const platoCategoriaOptions = computed(() => {
+  const set = new Set()
+  for (const p of platosAll.value) {
+    if (p.categoria) set.add(String(p.categoria).trim())
+  }
+  return [...set].sort((a, b) => a.localeCompare(b))
+})
+
+const platoTagOptions = computed(() => {
+  const set = new Set()
+  for (const p of platosAll.value) {
+    for (const t of p.tags || []) {
+      const label = prettyTag(t)
+      if (label) set.add(label)
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b))
+})
+
+const hasPlatosFilters = computed(() =>
+  Boolean(
+    platoQuery.value ||
+      selectedPlatoCategoria.value ||
+      selectedPlatoTag.value ||
+      selectedPlatoTypical.value !== 'all',
+  ),
+)
+
+const resetPlatosFilters = () => {
+  platoQuery.value = ''
+  selectedPlatoCategoria.value = null
+  selectedPlatoTag.value = null
+  selectedPlatoTypical.value = 'all'
+  platosPagination.viewPaged()
+}
+
+const togglePlatoCategoria = (cat) => {
+  selectedPlatoCategoria.value = selectedPlatoCategoria.value === cat ? null : cat
+}
+
+const togglePlatoTag = (tag) => {
+  selectedPlatoTag.value = selectedPlatoTag.value === tag ? null : tag
+}
+
+const filteredPlatos = computed(() => {
+  let results = platosAll.value
+
+  const q = normalizeForSearch(platoQuery.value)
+  if (q) {
+    results = results.filter((p) => {
+      const hay = [
+        p.name,
+        p.description,
+        p.categoria,
+        p.note,
+        ...(p.tags || []),
+      ]
+        .filter(Boolean)
+        .join(' | ')
+      return normalizeForSearch(hay).includes(q)
+    })
+  }
+
+  if (selectedPlatoCategoria.value) {
+    results = results.filter((p) => String(p.categoria || '').trim() === selectedPlatoCategoria.value)
+  }
+
+  if (selectedPlatoTypical.value === 'typical') {
+    results = results.filter((p) => p.is_typical)
+  } else if (selectedPlatoTypical.value === 'regional') {
+    results = results.filter((p) => !p.is_typical)
+  }
+
+  if (selectedPlatoTag.value) {
+    results = results.filter((p) =>
+      (p.tags || []).some((t) => prettyTag(t) === selectedPlatoTag.value),
+    )
+  }
+
+  return results
+})
+
+const platosPagination = usePagination(filteredPlatos, PLATOS_PAGE_SIZE)
+const displayPlatos = computed(() => platosPagination.displayItems.value)
+
+const platosPagState = computed(() => ({
+  page: platosPagination.page.value,
+  totalPages: platosPagination.totalPages.value,
+  total: platosPagination.total.value,
+  rangeFrom: platosPagination.rangeFrom.value,
+  rangeTo: platosPagination.rangeTo.value,
+  showAll: platosPagination.showAll.value,
+  hasPagination: platosPagination.hasPagination.value,
+}))
+
+const scrollToGastronomia = () => {
+  gastronomiaBlock.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+const onPlatosPrev = () => {
+  platosPagination.prevPage()
+  scrollToGastronomia()
+}
+
+const onPlatosNext = () => {
+  platosPagination.nextPage()
+  scrollToGastronomia()
+}
+
+const onPlatosViewAll = () => {
+  platosPagination.viewAll()
+  scrollToGastronomia()
+}
+
+const onPlatosViewPaged = () => {
+  platosPagination.viewPaged()
+  scrollToGastronomia()
+}
+
 const gastronomiaDisclaimer = computed(() => {
-  const items = gastronomia.value
+  const items = platosAll.value
   if (!items.length) return ''
-  const hasTypical = items.some(i => i.is_typical)
-  const hasRegional = items.some(i => !i.is_typical)
+  const hasTypical = items.some((i) => i.is_typical)
+  const hasRegional = items.some((i) => !i.is_typical)
   if (hasTypical && hasRegional) {
-    return 'Algunos platos están marcados como “Típico” (mencionados específicamente para este municipio). Los demás son referencia regional.'
+    return 'Algunos platos estan marcados como tipicos del municipio. Los demas son referencia regional.'
   }
   if (hasRegional && !hasTypical) {
     return 'Listado basado en referencia regional (Santander).'
@@ -900,6 +1424,14 @@ const onDestinosViewPaged = () => {
   color: #444;
 }
 
+.gallery-wrap {
+  padding: 0;
+}
+
+.gallery-wrap :deep(.media-gallery h2) {
+  display: none;
+}
+
 /* CLIMA */
 .clima {
   display: flex;
@@ -1023,6 +1555,11 @@ const onDestinosViewPaged = () => {
   padding: 3px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.06);
+}
+
+.tipo-pill.highlight {
+  background: #fff3cd;
+  color: #7a5b00;
 }
 
 .event-card {
@@ -1151,6 +1688,13 @@ const onDestinosViewPaged = () => {
   line-height: 1.35;
 }
 
+.dish-cat {
+  margin: 0;
+  font-size: 0.82rem;
+  opacity: 0.7;
+  text-transform: capitalize;
+}
+
 
 .dish-note {
   margin: 0;
@@ -1187,10 +1731,56 @@ const onDestinosViewPaged = () => {
   gap: 0;
 }
 
-.destinos-count {
-  margin: 0;
+.destinos-count,
+.section-count {
+  margin: 0 0 12px;
   font-size: 0.88rem;
   color: #666;
+}
+
+.search-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.search-inline input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  outline: none;
+  min-width: 0;
+}
+
+.search-inline .search-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.search-inline .search-clear {
+  flex-shrink: 0;
+  border: none;
+  background: #f4f4f5;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.empty-section {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #666;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
 }
 
 .empty-destinos {

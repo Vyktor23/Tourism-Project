@@ -11,8 +11,8 @@
 
         <div class="hero-media">
           <img
-            v-if="plato.image_url"
-            :src="plato.image_url"
+            v-if="heroImage"
+            :src="heroImage"
             :alt="plato.name"
             class="hero-image"
           />
@@ -93,14 +93,14 @@
       <section v-if="hasMedia" class="block">
         <div class="block-head">
           <h2>Fotos y videos</h2>
-          <p class="block-sub">Imagenes del plato y contenido relacionado</p>
+          <p class="block-sub">{{ platoMediaSummary }}</p>
         </div>
         <div class="content-card gallery-wrap">
           <MediaGallery
             title=""
             :alt-prefix="plato.name"
-            :image-sources="[plato.image_url]"
-            :video-sources="videoSources"
+            :image-sources="platoMedia.imageSources"
+            :video-sources="platoMedia.videoSources"
           />
         </div>
       </section>
@@ -196,7 +196,7 @@ import {
 import { AppRoute } from '@/router/links.js'
 import { getMunicipioBySlug } from '@/services/municipiosService'
 import { getPlatoBySlug, getMunicipioPlatoRelation } from '@/services/platosService'
-import { uniqueImages } from '@/utils/media'
+import { buildEntityMedia } from '@/utils/media'
 
 defineOptions({ name: 'PlatoDetail' })
 
@@ -245,9 +245,24 @@ const municipioPathLine = computed(() => locationPathLine(municipio.value))
 
 const muniProvinceLabel = computed(() => provinceLabel(municipio.value))
 
-const videoSources = computed(() => [])
+const platoMedia = computed(() =>
+  buildEntityMedia(plato.value, {
+    imageFields: ['image_url'],
+    galleryField: 'gallery',
+  }),
+)
 
-const hasMedia = computed(() => uniqueImages(plato.value?.image_url).length > 0)
+const heroImage = computed(() => platoMedia.value.heroImage)
+
+const hasMedia = computed(() => platoMedia.value.totalCount > 0)
+
+const platoMediaSummary = computed(() => {
+  const { imageCount, videoCount } = platoMedia.value
+  const parts = []
+  if (imageCount) parts.push(`${imageCount} foto${imageCount === 1 ? '' : 's'}`)
+  if (videoCount) parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`)
+  return parts.join(' · ') || 'Galeria del plato'
+})
 
 const goBack = () => router.back()
 const goToExplore = () => router.push(AppRoute.explorar())

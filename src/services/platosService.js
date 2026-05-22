@@ -1,7 +1,7 @@
 import { supabase } from '@/data/clientSupabase.js'
 
 const PLATO_FULL =
-  'id, name, slug, description, tags, image_url, id_departamento, ingredientes, historia, preparacion, categoria, tiempo_preparacion, dificultad, created_at, updated_at'
+  'id, name, slug, description, tags, image_url, gallery, id_departamento, ingredientes, historia, preparacion, categoria, tiempo_preparacion, dificultad, created_at, updated_at'
 
 const PLATO_BASIC = 'id, name, slug, description, tags, image_url'
 
@@ -17,7 +17,11 @@ export const getPlatoBySlug = async (slug) => {
     .eq('slug', slug)
     .single()
 
-  if (error && isMissingColumn(String(error.message || ''), 'ingredientes')) {
+  if (
+    error &&
+    (isMissingColumn(String(error.message || ''), 'ingredientes') ||
+      isMissingColumn(String(error.message || ''), 'gallery'))
+  ) {
     ;({ data, error } = await supabase
       .from('platos')
       .select(PLATO_BASIC)
