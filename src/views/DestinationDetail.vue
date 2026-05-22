@@ -18,8 +18,8 @@
 
         <div class="hero-media">
           <img
-            v-if="destination.image"
-            :src="destination.image"
+            v-if="heroImage"
+            :src="heroImage"
             :alt="destination.name"
           />
           <div v-else class="hero-fallback" />
@@ -116,26 +116,38 @@
         </article>
       </section>
 
-      <!-- GALERIA -->
-      <section v-if="gallery.length" class="block">
+      <!-- ACTIVIDADES -->
+      <section v-if="actividades.length" class="block">
         <div class="block-head">
-          <h2>Galeria</h2>
-          <p class="block-sub">{{ gallery.length }} imagen{{ gallery.length === 1 ? '' : 'es' }}</p>
+          <h2>Actividades</h2>
+          <p class="block-sub">Que puedes hacer en este destino</p>
         </div>
-        <div class="gallery-scroll">
-          <button
-            v-for="(img, i) in gallery"
-            :key="i"
-            type="button"
-            class="gallery-item"
-            @click="openImage(i)"
-          >
-            <img
-              :src="img"
-              :alt="'Foto ' + (i + 1) + ' de ' + destination.name"
-              loading="lazy"
-            />
-          </button>
+        <div class="actividades-list">
+          <article v-for="act in actividades" :key="act.id" class="actividad-card">
+            <h3>{{ act.nombre }}</h3>
+            <p v-if="act.descripcion">{{ act.descripcion }}</p>
+            <div class="actividad-meta">
+              <span v-if="act.duracion">⏱ {{ act.duracion }}</span>
+              <span v-if="act.dificultad">{{ act.dificultad }}</span>
+              <span v-if="act.costo">{{ act.costo }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- FOTOS Y VIDEOS -->
+      <section v-if="hasMedia" class="block">
+        <div class="block-head">
+          <h2>Fotos y videos</h2>
+          <p class="block-sub">{{ mediaSummary }}</p>
+        </div>
+        <div class="content-card gallery-wrap">
+          <MediaGallery
+            title=""
+            :alt-prefix="destination.name"
+            :image-sources="destinoMedia.imageSources"
+            :video-sources="destinoMedia.videoSources"
+          />
         </div>
       </section>
 
@@ -183,11 +195,6 @@
       </div>
     </div>
 
-    <!-- MODAL GALERIA -->
-    <div v-if="showImage && activeImage" class="image-modal" @click.self="closeImage">
-      <img :src="activeImage" :alt="destination?.name || 'Galeria'" />
-      <button type="button" class="close" aria-label="Cerrar" @click="closeImage">✕</button>
-    </div>
   </div>
 </template>
 
@@ -195,9 +202,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDestinoBySlug } from '@/services/destinosService'
+import { getActividadesByDestinoId } from '@/services/actividadesService'
 import DestinationMap from '@/components/DestinationMap.vue'
 import FavoriteButton from '@/components/FavoriteButton.vue'
 import BackButton from '@/components/BackButton.vue'
+import MediaGallery from '@/components/MediaGallery.vue'
+import { buildEntityMedia } from '@/utils/media'
 import {
   locationPathLine,
   provinceLabel,
@@ -211,32 +221,44 @@ const route = useRoute()
 const router = useRouter()
 
 const destination = ref(null)
+const actividades = ref([])
 const loading = ref(true)
-const showImage = ref(false)
-const activeIndex = ref(0)
 const mapBlock = ref(null)
+
+const destinoMedia = computed(() =>
+  buildEntityMedia(destination.value, {
+    imageFields: ['image'],
+    galleryField: 'gallery',
+    videoFields: [destination.value?.contacto, destination.value?.sources],
+  }),
+)
+
+const heroImage = computed(() => destinoMedia.value.heroImage)
+
+const hasMedia = computed(() => destinoMedia.value.totalCount > 0)
+
+const mediaSummary = computed(() => {
+  const { imageCount, videoCount } = destinoMedia.value
+  const parts = []
+  if (imageCount) parts.push(`${imageCount} foto${imageCount === 1 ? '' : 's'}`)
+  if (videoCount) parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`)
+  return parts.join(' · ') || 'Galeria del destino'
+})
 
 onMounted(async () => {
   try {
     destination.value = await getDestinoBySlug(route.params.destinoSlug)
+    if (destination.value?.id) {
+      actividades.value = await getActividadesByDestinoId(destination.value.id)
+    }
   } catch (err) {
     console.error('Error cargando destino:', err)
+    destination.value = null
+    actividades.value = []
   } finally {
     loading.value = false
   }
 })
-
-const gallery = computed(() => destination.value?.gallery || [])
-const activeImage = computed(() => gallery.value[activeIndex.value])
-
-const openImage = (i) => {
-  activeIndex.value = i
-  showImage.value = true
-}
-
-const closeImage = () => {
-  showImage.value = false
-}
 
 const go = (routeLocation) => router.push(routeLocation)
 const goBack = () => router.back()
@@ -538,36 +560,52 @@ const hasHighlights = computed(() =>
   opacity: 0.85;
 }
 
-/* GALERIA */
-.gallery-scroll {
+/* ACTIVIDADES */
+.actividades-list {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scroll-snap-type: x mandatory;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.gallery-item {
-  flex: 0 0 min(280px, 82vw);
-  scroll-snap-align: start;
-  border: none;
-  padding: 0;
+.actividad-card {
+  background: #fff;
   border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+  padding: 14px 16px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
 }
 
-.gallery-item img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.25s ease;
+.actividad-card h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
 }
 
-.gallery-item:hover img {
-  transform: scale(1.03);
+.actividad-card p {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.45;
+}
+
+.actividad-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.actividad-meta span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f4f4f5;
+}
+
+.gallery-wrap {
+  padding: 0;
+}
+
+.gallery-wrap :deep(.media-gallery h2) {
+  display: none;
 }
 
 /* MAP */
@@ -676,52 +714,14 @@ const hasHighlights = computed(() =>
   100% { opacity: 0.6; }
 }
 
-/* MODAL */
-.image-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1200;
-  padding: 20px;
-}
-
-.image-modal img {
-  max-width: 100%;
-  max-height: 88vh;
-  border-radius: 14px;
-  object-fit: contain;
-}
-
-.close {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  background: white;
-  border: none;
-  border-radius: 999px;
-  width: 42px;
-  height: 42px;
-  cursor: pointer;
-  font-size: 16px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
-}
-
 @media (min-width: 640px) {
   .quick-actions {
     max-width: 480px;
   }
 
-  .gallery-scroll {
+  .actividades-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    overflow: visible;
-  }
-
-  .gallery-item {
-    flex: unset;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

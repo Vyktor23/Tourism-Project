@@ -5,7 +5,7 @@ export function isVideoUrl(url) {
   return (
     /youtube\.com|youtu\.be/.test(u) ||
     /vimeo\.com/.test(u) ||
-    /\.(mp4|webm|ogg)(\?|$)/i.test(u)
+    /\.(mp4|webm|ogg|mov)(\?|$)/i.test(u)
   )
 }
 
@@ -26,9 +26,52 @@ export function toEmbedUrl(url) {
   const vimeo = raw.match(/vimeo\.com\/(\d+)/)
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
 
-  if (/\.(mp4|webm|ogg)(\?|$)/i.test(raw)) return raw
+  if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(raw)) return raw
 
   return null
+}
+
+const urlFromGalleryItem = (item) => {
+  if (!item) return null
+  if (typeof item === 'string') return item.trim() || null
+  if (typeof item === 'object') {
+    return (
+      item.url ||
+      item.src ||
+      item.href ||
+      item.link ||
+      null
+    )
+  }
+  return null
+}
+
+const isVideoGalleryItem = (item, url) => {
+  if (!url) return false
+  if (typeof item === 'object') {
+    const type = String(item.type || item.kind || item.media_type || '').toLowerCase()
+    if (type === 'video') return true
+  }
+  return isVideoUrl(url)
+}
+
+/** Separa un array gallery en imagenes y videos. */
+export function splitGalleryMedia(gallery) {
+  const images = []
+  const videos = []
+  if (!Array.isArray(gallery)) return { images, videos }
+
+  for (const item of gallery) {
+    const url = urlFromGalleryItem(item)
+    if (!url) continue
+    if (isVideoGalleryItem(item, url)) {
+      if (!videos.includes(url)) videos.push(url)
+    } else if (!images.includes(url)) {
+      images.push(url)
+    }
+  }
+
+  return { images, videos }
 }
 
 /** Extrae URLs de video desde contacto jsonb u otros campos opcionales. */
@@ -48,21 +91,30 @@ export function extractVideoUrls(...sources) {
     }
     if (typeof src !== 'object') continue
 
+    if (Array.isArray(src)) {
+      const { videos } = splitGalleryMedia(src)
+      videos.forEach((v) => push(v))
+      continue
+    }
+
     push(src.video)
     push(src.video_url)
     if (Array.isArray(src.videos)) src.videos.forEach(push)
     if (Array.isArray(src.media)) {
       for (const m of src.media) {
-        if (m?.type === 'video') push(m.url)
-        else push(m)
+        const url = urlFromGalleryItem(m)
+        if (url && isVideoGalleryItem(m, url)) push(url)
       }
+    }
+    if (Array.isArray(src.gallery)) {
+      splitGalleryMedia(src.gallery).videos.forEach((v) => push(v))
     }
   }
 
   return out
 }
 
-/** Lista única de imágenes válidas. */
+/** Lista unica de imagenes validas (incluye gallery[] de la BD). */
 export function uniqueImages(...sources) {
   const out = []
   const push = (v) => {
@@ -78,17 +130,52 @@ export function uniqueImages(...sources) {
       continue
     }
     if (Array.isArray(src)) {
-      src.forEach(push)
+      const { images } = splitGalleryMedia(src)
+      images.forEach(push)
       continue
     }
     if (typeof src === 'object') {
       push(src.image)
       push(src.image_url)
       push(src.imagen)
-      if (Array.isArray(src.gallery)) src.gallery.forEach(push)
+      if (Array.isArray(src.gallery)) {
+        splitGalleryMedia(src.gallery).images.forEach(push)
+      }
       if (Array.isArray(src.images)) src.images.forEach(push)
     }
   }
 
   return out
+}
+
+/**
+ * Arma fuentes de media para MediaGallery y hero.
+ * @param {object} entity
+ * @param {{ imageFields?: string[], galleryField?: string, videoFields?: any[] }} options
+ */
+export function buildEntityMedia(entity, options = {}) {
+  const imageFields = options.imageFields || ['image', 'image_url', 'imagen']
+  const galleryField = options.galleryField || 'gallery'
+  const videoFields = options.videoFields || []
+
+  const gallery = entity?.[galleryField]
+  const imageSources = [
+    ...imageFields.map((f) => entity?.[f]),
+    gallery,
+  ]
+  const videoSources = [...videoFields, gallery]
+
+  const images = uniqueImages(...imageSources)
+  const videos = extractVideoUrls(...videoSources)
+
+  return {
+    images,
+    videos,
+    heroImage: images[0] || null,
+    imageSources,
+    videoSources,
+    imageCount: images.length,
+    videoCount: videos.length,
+    totalCount: images.length + videos.length,
+  }
 }

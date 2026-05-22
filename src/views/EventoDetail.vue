@@ -11,8 +11,8 @@
 
         <div class="hero-media">
           <img
-            v-if="evento.imagen"
-            :src="evento.imagen"
+            v-if="heroImage"
+            :src="heroImage"
             :alt="evento.title"
             class="hero-image"
           />
@@ -95,14 +95,14 @@
       <section v-if="hasMedia" class="block">
         <div class="block-head">
           <h2>Fotos y videos</h2>
-          <p class="block-sub">Material del evento y enlaces relacionados</p>
+          <p class="block-sub">{{ eventoMediaSummary }}</p>
         </div>
         <div class="content-card gallery-wrap">
           <MediaGallery
             title=""
             :alt-prefix="evento.title"
-            :image-sources="[evento.imagen]"
-            :video-sources="[evento.contacto, evento.source_url]"
+            :image-sources="eventoMedia.imageSources"
+            :video-sources="eventoMedia.videoSources"
           />
         </div>
       </section>
@@ -181,7 +181,7 @@ import { AppRoute } from '@/router/links.js'
 import { getMunicipioBySlug } from '@/services/municipiosService'
 import { getEventoById } from '@/services/eventosService'
 import { normalizeEvento } from '@/utils/eventos'
-import { uniqueImages, extractVideoUrls } from '@/utils/media'
+import { buildEntityMedia } from '@/utils/media'
 
 defineOptions({ name: 'EventoDetail' })
 
@@ -240,10 +240,24 @@ const contactItems = computed(() => {
 
 const hasContact = computed(() => contactItems.value.length > 0)
 
-const hasMedia = computed(() => {
-  const imgs = uniqueImages(evento.value?.imagen)
-  const vids = extractVideoUrls(evento.value?.contacto, evento.value?.source_url)
-  return imgs.length > 0 || vids.length > 0
+const eventoMedia = computed(() =>
+  buildEntityMedia(evento.value, {
+    imageFields: ['imagen'],
+    galleryField: 'gallery',
+    videoFields: [evento.value?.contacto, evento.value?.source_url],
+  }),
+)
+
+const heroImage = computed(() => eventoMedia.value.heroImage)
+
+const hasMedia = computed(() => eventoMedia.value.totalCount > 0)
+
+const eventoMediaSummary = computed(() => {
+  const { imageCount, videoCount } = eventoMedia.value
+  const parts = []
+  if (imageCount) parts.push(`${imageCount} foto${imageCount === 1 ? '' : 's'}`)
+  if (videoCount) parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`)
+  return parts.join(' · ') || 'Galeria del evento'
 })
 
 const goBack = () => router.back()
