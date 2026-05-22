@@ -1,40 +1,115 @@
 <template>
-  <div v-if="municipio" class="municipio-page">
+  <div class="page">
+    <div v-if="loading" class="municipio-shell loading-shell">
+      <header class="hero hero-skeleton"><div class="sk-hero" /></header>
+      <section class="block"><div v-for="n in 4" :key="n" class="sk-line" /></section>
+    </div>
 
-    <!-- HERO -->
-    <section class="hero">
-      <button class="back" type="button" @click="goBack">← Volver</button>
+    <div v-else-if="municipio" class="municipio-shell">
+      <!-- HERO -->
+      <header class="hero">
+        <BackButton floating @click="goBack" />
 
-      <img
-        v-if="municipio.image"
-        :src="municipio.image"
-        :alt="municipio.name"
-        class="hero-image"
-      />
-      <div class="hero-overlay">
-        <h1>{{ municipio.name }}</h1>
-        <p v-if="municipio.province">{{ municipio.province }}</p>
-      </div>
-    </section>
+        <div class="hero-media">
+          <img
+            v-if="municipio.image"
+            :src="municipio.image"
+            :alt="municipio.name"
+            class="hero-image"
+          />
+          <div v-else class="hero-fallback" />
 
-    <!-- DESCRIPCIÓN -->
-    <section class="description" v-if="municipio.description">
-      <p>{{ municipio.description }}</p>
-    </section>
+          <div class="hero-overlay">
+            <nav class="breadcrumb" aria-label="Ubicacion">
+              <button type="button" @click="goToExplore">Colombia</button>
+              <template v-if="muniDepartamento">
+                <span>›</span>
+                <span class="crumb-text">{{ muniDepartamento }}</span>
+              </template>
+              <span>›</span>
+              <span class="current">{{ municipio.name }}</span>
+            </nav>
+            <h1>{{ municipio.name }}</h1>
+            <div class="hero-place">
+              <p class="hero-place-path">{{ municipioPathLine }}</p>
+              <p v-if="muniProvinceLabel" class="hero-place-province">{{ muniProvinceLabel }}</p>
+            </div>
+          </div>
+        </div>
 
+        <div class="hero-stats">
+          <div class="stat">
+            <strong>{{ destinos.length }}</strong>
+            <span>Destinos</span>
+          </div>
+          <div class="stat">
+            <strong>{{ eventosVisibles.length }}</strong>
+            <span>Eventos</span>
+          </div>
+          <div class="stat">
+            <strong>{{ gastronomia.length }}</strong>
+            <span>Gastronomia</span>
+          </div>
+        </div>
+      </header>
 
-    <!-- CLIMA (perfil general, NO pronóstico) -->
-    <section v-if="climaHasData" class="clima">
-      <div class="section-header">
-        <h2>Clima</h2>
-        <p class="section-sub">
-          Perfil general del municipio. No es pronóstico diario.
-        </p>
-      </div>
+      <!-- QUICK ACTIONS -->
+      <section class="quick-actions">
+        <button
+          v-if="climaHasData"
+          type="button"
+          class="qa"
+          @click="scrollToSection(climaBlock)"
+        >
+          🌤️<span>Clima</span>
+        </button>
+        <button
+          v-if="eventosVisibles.length"
+          type="button"
+          class="qa"
+          @click="scrollToSection(eventosBlock)"
+        >
+          🎭<span>Eventos</span>
+        </button>
+        <button
+          v-if="gastronomia.length"
+          type="button"
+          class="qa"
+          @click="scrollToSection(gastronomiaBlock)"
+        >
+          🍽️<span>Comida</span>
+        </button>
+        <button
+          v-if="destinos.length"
+          type="button"
+          class="qa"
+          @click="scrollToSection(destinosBlock)"
+        >
+          📍<span>Destinos</span>
+        </button>
+      </section>
 
-      <p v-if="climaResumen" class="clima-resumen">{{ climaResumen }}</p>
+      <!-- DESCRIPCION -->
+      <section v-if="municipio.description" class="block">
+        <div class="block-head">
+          <h2>Sobre el municipio</h2>
+          <p class="block-sub">Conoce su esencia antes de planear tu visita</p>
+        </div>
+        <article class="content-card">
+          <p>{{ municipio.description }}</p>
+        </article>
+      </section>
 
-      <div class="clima-grid">
+      <!-- CLIMA -->
+      <section v-if="climaHasData" ref="climaBlock" class="block clima">
+        <div class="block-head">
+          <h2>Clima</h2>
+          <p class="block-sub">Perfil general del municipio. No es pronostico diario.</p>
+        </div>
+
+        <p v-if="climaResumen" class="clima-resumen">{{ climaResumen }}</p>
+
+        <div class="clima-grid">
         <div v-if="climaTempProm !== null" class="clima-card">
           <div class="clima-k">Temperatura promedio</div>
           <div class="clima-v">{{ climaTempProm }} °C</div>
@@ -63,27 +138,27 @@
 
       <p v-if="climaRecomendacion" class="clima-tip">{{ climaRecomendacion }}</p>
 
-      <details v-if="climaFuentes?.length" class="clima-sources">
-        <summary>Fuentes</summary>
-        <ul>
-          <li v-for="(f, i) in climaFuentes" :key="i">
-            <a :href="f.url" target="_blank" rel="noopener noreferrer">
-              {{ f.title || f.url }}
-            </a>
-            <span v-if="f.accessed_at" class="src-date"> (consultado: {{ f.accessed_at }})</span>
-          </li>
-        </ul>
-      </details>
-    </section>
+        <details v-if="climaFuentes?.length" class="clima-sources">
+          <summary>Fuentes</summary>
+          <ul>
+            <li v-for="(f, i) in climaFuentes" :key="i">
+              <a :href="f.url" target="_blank" rel="noopener noreferrer">
+                {{ f.title || f.url }}
+              </a>
+              <span v-if="f.accessed_at" class="src-date"> (consultado: {{ f.accessed_at }})</span>
+            </li>
+          </ul>
+        </details>
+      </section>
 
-    <!-- EVENTOS CULTURALES -->
-    <section v-if="eventosVisibles.length" class="eventos">
-      <div class="section-header">
-        <h2>Eventos culturales</h2>
-        <p class="section-sub">Fechas según fuente. Algunos eventos solo publican mes/temporada.</p>
-      </div>
+      <!-- EVENTOS -->
+      <section v-if="eventosVisibles.length" ref="eventosBlock" class="block eventos">
+        <div class="block-head">
+          <h2>Eventos culturales</h2>
+          <p class="block-sub">Fechas segun fuente. Algunos eventos solo publican mes o temporada.</p>
+        </div>
 
-      <div class="event-grid">
+        <div class="card-grid event-grid">
         <article
           v-for="e in eventosVisibles"
           :key="e.id"
@@ -115,16 +190,14 @@
       </div>
     </section>
 
-    <!-- GASTRONOMÍA -->
-    <section v-if="gastronomia.length" class="gastronomia">
-      <div class="section-header">
-        <h2>Gastronomía</h2>
-        <p class="section-sub" v-if="gastronomiaDisclaimer">
-          {{ gastronomiaDisclaimer }}
-        </p>
-      </div>
+      <!-- GASTRONOMIA -->
+      <section v-if="gastronomia.length" ref="gastronomiaBlock" class="block gastronomia">
+        <div class="block-head">
+          <h2>Gastronomia</h2>
+          <p v-if="gastronomiaDisclaimer" class="block-sub">{{ gastronomiaDisclaimer }}</p>
+        </div>
 
-      <div class="dish-grid">
+        <div class="card-grid dish-grid">
         <article
           v-for="p in gastronomia"
           :key="p.id || p.slug"
@@ -165,15 +238,15 @@
       </div>
     </section>
 
-    <!-- DESTINOS DEL MUNICIPIO -->
-    <section v-if="destinos.length" ref="destinosBlock" class="destinos-section">
-      <div class="section-header">
-        <h2>Destinos turísticos</h2>
-        <p class="section-sub">Lugares y experiencias en {{ municipio.name }}</p>
-      </div>
+      <!-- DESTINOS -->
+      <section v-if="destinos.length" ref="destinosBlock" class="block destinos-section">
+        <div class="block-head">
+          <h2>Destinos turisticos</h2>
+          <p class="block-sub">Lugares y experiencias en {{ municipio.name }}</p>
+        </div>
 
-      <div class="filters">
-      <div class="filters-top">
+        <div class="filters">
+        <div class="filters-top">
         <SearchBox
           v-model="destinoQuery"
           mode="destinos"
@@ -202,26 +275,27 @@
         </button>
       </div>
 
-      <div v-if="categories.length" class="categories">
-        <button
-          :class="{ active: !selectedCategory }"
-          @click="selectedCategory = null"
-        >
-          Todos
-        </button>
+        <div v-if="categories.length" class="categories">
+          <button
+            type="button"
+            :class="{ active: !selectedCategory }"
+            @click="selectedCategory = null"
+          >
+            Todos
+          </button>
+          <button
+            v-for="category in categories"
+            :key="category"
+            type="button"
+            :class="{ active: selectedCategory === category }"
+            @click="selectedCategory = selectedCategory === category ? null : category"
+          >
+            {{ category }}
+          </button>
+        </div>
+        </div>
 
-        <button
-          v-for="category in categories"
-          :key="category"
-          :class="{ active: selectedCategory === category }"
-          @click="selectedCategory = category"
-        >
-          {{ category }}
-        </button>
-      </div>
-      </div>
-
-      <p class="destinos-count">
+        <p class="destinos-count">
         {{ destinosPagState.total }} destino{{ destinosPagState.total === 1 ? '' : 's' }}
         <span v-if="destinosPagState.hasPagination && !destinosPagState.showAll">
           · página {{ destinosPagState.page }} de {{ destinosPagState.totalPages }}
@@ -229,37 +303,56 @@
         <span v-else-if="destinosPagState.showAll"> · ver todo</span>
       </p>
 
-      <DestinationList
-        v-if="displayDestinos.length"
-        :destinations="displayDestinos"
-        variant="grid"
-        @select="goToDestination"
-      />
+        <DestinationList
+          v-if="displayDestinos.length"
+          :destinations="displayDestinos"
+          variant="grid"
+          @select="goToDestination"
+        />
 
-      <div v-else class="empty-destinos">
-        <p>No hay destinos con esos filtros.</p>
+        <div v-else class="empty-destinos">
+          <p>No hay destinos con esos filtros.</p>
+          <button v-if="hasDestinosFilters" type="button" class="btn-secondary" @click="resetDestinosFilters">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <ListPagination
+          v-if="destinosPagState.hasPagination"
+          :page="destinosPagState.page"
+          :total-pages="destinosPagState.totalPages"
+          :total="destinosPagState.total"
+          :range-from="destinosPagState.rangeFrom"
+          :range-to="destinosPagState.rangeTo"
+          :show-all="destinosPagState.showAll"
+          :page-size="LIST_PAGE_SIZE"
+          @prev="onDestinosPrev"
+          @next="onDestinosNext"
+          @view-all="onDestinosViewAll"
+          @view-paged="onDestinosViewPaged"
+        />
+      </section>
+
+      <!-- CTA -->
+      <section class="final-cta">
+        <h2>Descubre mas de Santander</h2>
+        <p>Sigue explorando municipios y destinos cercanos.</p>
+        <button type="button" class="btn-primary" @click="goToExplore">
+          Explorar mapa
+        </button>
+      </section>
+    </div>
+
+    <div v-else class="municipio-shell empty-page">
+      <div class="empty-card">
+        <span>😕</span>
+        <h2>Municipio no encontrado</h2>
+        <p>No pudimos cargar la informacion de este lugar.</p>
+        <button type="button" class="btn-primary" @click="goToExplore">
+          Volver a explorar
+        </button>
       </div>
-
-      <ListPagination
-        v-if="destinosPagState.hasPagination"
-        :page="destinosPagState.page"
-        :total-pages="destinosPagState.totalPages"
-        :total="destinosPagState.total"
-        :range-from="destinosPagState.rangeFrom"
-        :range-to="destinosPagState.rangeTo"
-        :show-all="destinosPagState.showAll"
-        :page-size="LIST_PAGE_SIZE"
-        @prev="onDestinosPrev"
-        @next="onDestinosNext"
-        @view-all="onDestinosViewAll"
-        @view-paged="onDestinosViewPaged"
-      />
-    </section>
-
-  </div>
-
-  <div v-else class="loading">
-    Cargando municipio...
+    </div>
   </div>
 </template>
 
@@ -279,6 +372,13 @@ import { usePagination } from '@/composables/usePagination'
 import DestinationList from '@/components/DestinationList.vue'
 import SearchBox from '@/components/SearchBox.vue'
 import ListPagination from '@/components/ListPagination.vue'
+import BackButton from '@/components/BackButton.vue'
+import {
+  locationPathLine,
+  provinceLabel,
+  departamentoLabel,
+} from '@/utils/locationDisplay.js'
+import { AppRoute } from '@/router/links.js'
 
 const LIST_PAGE_SIZE = 12
 
@@ -297,6 +397,23 @@ const onlyFavorites = ref(false)
 const { isFavorite } = useFavorites()
 const loading = ref(true)
 const destinosBlock = ref(null)
+const climaBlock = ref(null)
+const eventosBlock = ref(null)
+const gastronomiaBlock = ref(null)
+
+const muniDepartamento = computed(() => departamentoLabel(municipio.value))
+
+const municipioPathLine = computed(() =>
+  locationPathLine(municipio.value, ' · ', { includeMunicipio: false }),
+)
+
+const muniProvinceLabel = computed(() => provinceLabel(municipio.value))
+
+const goToExplore = () => router.push(AppRoute.explorar())
+
+const scrollToSection = (el) => {
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 // Tags llegan como text[]; esto los hace más presentables
 const prettyTag = (tag) => {
@@ -309,35 +426,17 @@ const goBack = () => router.back()
 
 const goToPlato = (plato) => {
   if (!plato?.slug || !municipio.value?.slug) return
-  router.push({
-    name: 'PlatoDetail',
-    params: {
-      municipioSlug: municipio.value.slug,
-      platoSlug: plato.slug,
-    },
-  })
+  router.push(AppRoute.plato(municipio.value, plato))
 }
 
 const goToEvento = (evento) => {
   if (!evento?.id || !municipio.value?.slug) return
-  router.push({
-    name: 'EventoDetail',
-    params: {
-      municipioSlug: municipio.value.slug,
-      eventoId: String(evento.id),
-    },
-  })
+  router.push(AppRoute.evento(municipio.value, evento))
 }
 
-/* 👉 NAVEGACIÓN AL DESTINO (CORREGIDA) */
 const goToDestination = (destino) => {
-  router.push({
-    name: 'DestinationDetail',
-    params: {
-      municipioSlug: municipio.value.slug,
-      destinoSlug: destino.slug
-    }
-  })
+  if (!destino?.slug || !municipio.value?.slug) return
+  router.push(AppRoute.destino({ ...destino, municipio: municipio.value }))
 }
 
 onMounted(async () => {
@@ -613,110 +712,199 @@ const onDestinosViewPaged = () => {
 </script>
 
 <style scoped>
-.municipio-page {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 0 16px 100px;
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  overflow-x: hidden;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  background: #f4f4f5;
+}
+
+.municipio-shell {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* HERO */
 .hero {
   position: relative;
-  height: 280px;
-  margin: 0 -16px;
-  border-radius: 0 0 16px 16px;
+  background: linear-gradient(165deg, #0a0a0a 0%, #1a2e1a 40%, #16213e 100%);
+  color: #fff;
+  border-radius: 0 0 28px 28px;
   overflow: hidden;
 }
 
-.back {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-
-  background: white;
-  border: none;
-  border-radius: 20px;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+.hero-media {
+  position: relative;
+  height: clamp(280px, 46vh, 400px);
 }
 
-.hero-image {
+.hero-image,
+.hero-fallback {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.hero-fallback {
+  background: linear-gradient(135deg, #1a3a2a, #2a4a3a);
 }
 
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.65),
-    rgba(0, 0, 0, 0.2)
-  );
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 1.5rem;
-  color: white;
+  padding: 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.78), transparent 55%);
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.breadcrumb button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.breadcrumb .current {
+  color: #fff;
+  font-weight: 700;
+}
+
+.breadcrumb .crumb-text {
+  opacity: 0.92;
 }
 
 .hero-overlay h1 {
-  font-size: 2rem;
-  font-weight: 700;
   margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+  line-height: 1.12;
 }
 
-.hero-overlay p {
-  margin: 0.25rem 0 0;
-  opacity: 0.9;
+.hero-place {
+  margin-top: 4px;
 }
 
-/* DESCRIPCIÓN */
-.description {
-  max-width: 800px;
-  line-height: 1.6;
-  font-size: 1rem;
-}
-
-/* SECCIONES */
-.section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.section-header h2 {
+.hero-place-path {
   margin: 0;
-  font-size: 1.25rem;
-}
-
-.section-sub {
-  margin: 0;
-  font-size: 0.92rem;
-  opacity: 0.75;
-  max-width: 900px;
+  font-size: 0.9rem;
+  opacity: 0.92;
   line-height: 1.4;
 }
 
-/* GASTRONOMÍA */
-.gastronomia {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.hero-place-province {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
 
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 16px 16px 20px;
+}
+
+.stat {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.stat strong {
+  display: block;
+  font-size: 1.35rem;
+}
+
+.stat span {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* QUICK ACTIONS */
+.quick-actions {
+  margin: 14px 16px 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.qa {
+  border: none;
+  background: white;
+  border-radius: 14px;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.qa span {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* BLOCKS */
+.block {
+  margin: 20px 16px 0;
+}
+
+.block-head {
+  margin-bottom: 12px;
+}
+
+.block-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.block-sub {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.content-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+}
+
+.content-card p {
+  margin: 0;
+  line-height: 1.65;
+  color: #444;
+}
 
 /* CLIMA */
 .clima {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 12px;
 }
 
 .clima-resumen {
@@ -733,10 +921,11 @@ const onDestinosViewPaged = () => {
 }
 
 .clima-card {
-  border: 1px solid rgba(0,0,0,.08);
+  border: none;
   border-radius: 16px;
-  padding: 12px 14px;
-  background: rgba(0,0,0,.02);
+  padding: 14px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
 }
 
 .clima-k {
@@ -779,14 +968,8 @@ const onDestinosViewPaged = () => {
   font-size: 12px;
 }
 
-/* EVENTOS */
-.eventos {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.event-grid {
+/* CARD GRIDS */
+.card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 14px;
@@ -843,11 +1026,11 @@ const onDestinosViewPaged = () => {
 }
 
 .event-card {
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 16px;
+  border: none;
+  border-radius: 18px;
   padding: 12px 14px 14px;
   background: white;
-  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -906,11 +1089,11 @@ const onDestinosViewPaged = () => {
 }
 
 .dish-card {
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 16px;
+  border: none;
+  border-radius: 18px;
   overflow: hidden;
   background: white;
-  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 .dish-media {
@@ -986,8 +1169,8 @@ const onDestinosViewPaged = () => {
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.10);
-  background: rgba(0,0,0,.03);
+  background: #f4f4f5;
+  border: 1px solid #eee;
 }
 
 /* FILTROS */
@@ -995,12 +1178,13 @@ const onDestinosViewPaged = () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 14px;
 }
 
 .destinos-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0;
 }
 
 .destinos-count {
@@ -1013,8 +1197,19 @@ const onDestinosViewPaged = () => {
   text-align: center;
   padding: 2rem 1rem;
   color: #666;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 16px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary {
+  margin-top: 12px;
+  border: none;
+  background: #f4f4f5;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .filters-top {
@@ -1048,23 +1243,19 @@ const onDestinosViewPaged = () => {
 }
 
 .filters button {
-  padding: 0.45rem 0.95rem;
+  border: none;
+  background: #fff;
+  padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid #ddd;
-  background: white;
   cursor: pointer;
-  font-size: 0.92rem;
-  transition: all 0.2s ease;
-}
-
-.filters button:hover {
-  background: #f5f5f5;
+  font-size: 13px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  transition: background 0.15s ease;
 }
 
 .filters button.active {
   background: #111;
-  color: white;
-  border-color: #111;
+  color: #fff;
 }
 
 
@@ -1079,11 +1270,109 @@ const onDestinosViewPaged = () => {
   border-color: #ff2d55;
 }
 
-/* LOADING */
-.loading {
-  padding: 4rem 0;
+/* CTA */
+.final-cta {
+  margin: 28px 16px 0;
+  padding: 32px 24px;
+  border-radius: 24px;
   text-align: center;
-  font-size: 1.1rem;
-  opacity: 0.7;
+  color: #fff;
+  background: linear-gradient(165deg, #0a0a0a 0%, #1a2e1a 50%, #16213e 100%);
+}
+
+.final-cta h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+}
+
+.final-cta p {
+  margin: 0;
+  opacity: 0.88;
+}
+
+.btn-primary {
+  margin-top: 16px;
+  border: none;
+  background: #fff;
+  color: #111;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* EMPTY / LOADING */
+.empty-page {
+  padding: 40px 16px;
+}
+
+.empty-card {
+  background: #fff;
+  border-radius: 22px;
+  padding: 36px 24px;
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+}
+
+.empty-card span {
+  font-size: 40px;
+}
+
+.empty-card h2 {
+  margin: 12px 0 8px;
+}
+
+.empty-card p {
+  color: #666;
+  margin: 0 0 16px;
+}
+
+.hero-skeleton {
+  min-height: 320px;
+}
+
+.sk-hero {
+  height: 280px;
+  background: linear-gradient(90deg, #222, #333, #222);
+  animation: shimmer 1.2s infinite;
+}
+
+.sk-line {
+  height: 16px;
+  border-radius: 8px;
+  background: #e8e8e8;
+  margin-bottom: 10px;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@media (min-width: 640px) {
+  .quick-actions {
+    max-width: 520px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    border-radius: 0 0 32px 32px;
+  }
+
+  .block,
+  .quick-actions,
+  .final-cta {
+    margin-left: 32px;
+    margin-right: 32px;
+  }
+}
+
+@media (max-width: 520px) {
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

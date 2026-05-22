@@ -312,7 +312,7 @@ const pickHighlighted = () => {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
   max-height: min(320px, 50vh);
   overflow-y: auto;
-  z-index: 60;
+  z-index: 1090;
 }
 
 .suggestion {
