@@ -1,7 +1,7 @@
 <template>
   <!-- EMERGENCY FLOATING BUTTON -->
   <RouterLink
-    to="/emergencies"
+    :to="{ name: 'emergencias' }"
     class="emergency-fab"
     title="Emergencias"
   >
@@ -10,17 +10,17 @@
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav" aria-label="Navegación principal">
-    <RouterLink to="/home" class="nav-item">
+    <RouterLink :to="{ name: 'inicio' }" class="nav-item">
       <span class="nav-icon" aria-hidden="true">🏠</span>
       <span class="nav-label">Inicio</span>
     </RouterLink>
 
-    <RouterLink to="/explore" class="nav-item">
+    <RouterLink :to="{ name: 'explorar' }" class="nav-item">
       <span class="nav-icon" aria-hidden="true">🧭</span>
       <span class="nav-label">Explorar</span>
     </RouterLink>
 
-    <RouterLink to="/favorites" class="nav-item">
+    <RouterLink :to="{ name: 'favoritos' }" class="nav-item">
       <span class="nav-icon" aria-hidden="true">
         ❤️
         <span
@@ -33,7 +33,7 @@
       <span class="nav-label">Favoritos</span>
     </RouterLink>
 
-    <RouterLink to="/more" class="nav-item">
+    <RouterLink :to="{ name: 'mas' }" class="nav-item">
       <span class="nav-icon" aria-hidden="true">⋯</span>
       <span class="nav-label">Más</span>
     </RouterLink>
@@ -52,7 +52,7 @@ const { favorites } = useFavorites()
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: 1100;
 
   display: flex;
   align-items: stretch;
@@ -161,7 +161,7 @@ const { favorites } = useFavorites()
   text-decoration: none;
 
   box-shadow: 0 12px 28px rgba(183, 28, 28, 0.45);
-  z-index: 100;
+  z-index: 1101;
   animation: pulse 2.4s infinite;
 }
 

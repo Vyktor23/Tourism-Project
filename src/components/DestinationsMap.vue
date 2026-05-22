@@ -1,5 +1,5 @@
 <template>
-  <div class="map-wrapper">
+  <div class="map-wrapper map-stack-root">
     <div class="map-header">
       🗺️ Destinos en el mapa
       <span class="count" v-if="count">({{ count }})</span>
@@ -13,6 +13,7 @@
 import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import '@/styles/leaflet-stack.css'
 
 const props = defineProps({
   destinations: {

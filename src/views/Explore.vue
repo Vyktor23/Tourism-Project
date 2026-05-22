@@ -4,7 +4,7 @@
 
       <!-- HERO -->
       <header class="hero">
-        <button class="back" type="button" @click="goBack">←</button>
+        <BackButton @click="goBack" />
 
         <div class="hero-text">
           <span class="location">📍 {{ heroLocation }}</span>
@@ -370,12 +370,13 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import MunicipioList from '@/components/MunicipioList.vue'
 import DestinationList from '@/components/DestinationList.vue'
 import DestinationsMap from '@/components/DestinationsMap.vue'
 import SearchBox from '@/components/SearchBox.vue'
 import ListPagination from '@/components/ListPagination.vue'
+import BackButton from '@/components/BackButton.vue'
 
 import { getMunicipios } from '@/services/municipiosService'
 import { getDestinos } from '@/services/destinosService'
@@ -383,6 +384,7 @@ import { getDepartamentosExplore } from '@/services/departamentosService'
 import { normalizeForSearch } from '@/utils/text'
 import { useFavorites } from '@/composables/useFavorites'
 import { usePagination } from '@/composables/usePagination'
+import { AppRoute } from '@/router/links.js'
 
 defineOptions({ name: 'ExplorePage' })
 
@@ -408,6 +410,7 @@ const normalizeDept = (name) =>
     .trim()
 
 const router = useRouter()
+const route = useRoute()
 const { isFavorite } = useFavorites()
 
 const departamentos = ref([])
@@ -469,6 +472,28 @@ const loadDestinos = async () => {
   }
 }
 
+const applyRouteQuery = () => {
+  const cat = route.query.categoria || route.query.category
+  const mood = route.query.mood
+  const map = route.query.map
+
+  if (cat) {
+    setView('destinos')
+    selectedCategories.value = new Set([String(cat)])
+    showCategoryFilters.value = true
+  }
+
+  if (mood) {
+    setView('destinos')
+    selectedMood.value = String(mood)
+  }
+
+  if (map === '1' || map === 'true') {
+    setView('destinos')
+    showMap.value = true
+  }
+}
+
 onMounted(async () => {
   await Promise.all([loadDepartamentos(), loadMunicipios(), loadDestinos()])
 
@@ -476,7 +501,15 @@ onMounted(async () => {
     (d) => d.available && normalizeDept(d.nombre) === 'santander',
   )
   if (santander) selectDepartamento(santander)
+  applyRouteQuery()
 })
+
+watch(
+  () => route.query,
+  () => {
+    if (selectedDepartamento.value) applyRouteQuery()
+  },
+)
 
 const availableDeptCount = computed(
   () => departamentos.value.filter((d) => d.available).length,
@@ -886,16 +919,13 @@ const scrollToProvinces = () => {
 }
 
 const goToMunicipio = (municipio) => {
-  router.push({
-    name: 'MunicipioDetail',
-    params: { municipioSlug: municipio.slug },
-  })
+  if (!municipio?.slug) return
+  router.push(AppRoute.municipio(municipio))
 }
 
 const goToDestino = (dest) => {
-  const mSlug = dest?.municipio?.slug
-  if (!mSlug || !dest?.slug) return
-  router.push('/explore/' + mSlug + '/' + dest.slug)
+  if (!dest?.slug || !dest?.municipio?.slug) return
+  router.push(AppRoute.destino(dest))
 }
 
 const goBack = () => router.back()
@@ -924,17 +954,6 @@ const goBack = () => router.back()
   background: linear-gradient(165deg, #0a0a0a 0%, #1a1a2e 55%, #16213e 100%);
   color: white;
   border-radius: 0 0 28px 28px;
-}
-
-.back {
-  background: rgba(255, 255, 255, 0.12);
-  border: none;
-  color: white;
-  font-size: 18px;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  cursor: pointer;
 }
 
 .hero-text {

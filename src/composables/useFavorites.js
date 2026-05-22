@@ -70,9 +70,14 @@ export function useFavorites() {
     { deep: true }
   )
 
+  const clearAll = () => {
+    favorites.value = []
+  }
+
   return {
     favorites,
     toggleFavorite,
-    isFavorite
+    isFavorite,
+    clearAll,
   }
 }

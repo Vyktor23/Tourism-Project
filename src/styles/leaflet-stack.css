@@ -1,0 +1,47 @@
+/**
+ * Leaflet usa z-index muy altos (paneles ~400, controles ~1000).
+ * Sin esto, al hacer scroll el mapa tapa la barra inferior fija.
+ */
+.map-stack-root {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.map-stack-root .leaflet-container {
+  z-index: 0 !important;
+}
+
+.map-stack-root .leaflet-pane {
+  z-index: auto !important;
+}
+
+.map-stack-root .leaflet-tile-pane {
+  z-index: 1 !important;
+}
+
+.map-stack-root .leaflet-overlay-pane {
+  z-index: 2 !important;
+}
+
+.map-stack-root .leaflet-shadow-pane {
+  z-index: 3 !important;
+}
+
+.map-stack-root .leaflet-marker-pane {
+  z-index: 4 !important;
+}
+
+.map-stack-root .leaflet-tooltip-pane {
+  z-index: 5 !important;
+}
+
+.map-stack-root .leaflet-popup-pane {
+  z-index: 6 !important;
+}
+
+.map-stack-root .leaflet-top,
+.map-stack-root .leaflet-bottom {
+  z-index: 7 !important;
+}

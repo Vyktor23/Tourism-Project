@@ -1,5 +1,5 @@
 <template>
-  <div class="map-wrapper">
+  <div class="map-wrapper map-stack-root">
     <div class="map-header">
       🗺️ {{ name }}
     </div>
@@ -12,6 +12,7 @@
 import { onMounted, ref, onUnmounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import '@/styles/leaflet-stack.css'
 
 const props = defineProps({
   lat: {
