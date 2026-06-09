@@ -13,6 +13,9 @@ import NotFound from '@/views/NotFound.vue'
 import About from '@/views/About.vue'
 import TripPlanner from '@/views/TripPlanner.vue'
 import SafetyTips from '@/views/SafetyTips.vue'
+import AdminLogin from '@/views/AdminLogin.vue'
+import AdminPanel from '@/views/AdminPanel.vue'
+import { ensureAdminAuth, useAdminAuth } from '@/composables/useAdminAuth'
 
 const GEO = '/colombia/:departamentoSlug/:municipioSlug'
 
@@ -48,6 +51,18 @@ const router = createRouter({
       name: 'planificar-viaje',
       component: TripPlanner,
       meta: { title: 'Planificar viaje' },
+    },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: AdminLogin,
+      meta: { title: 'Acceso admin' },
+    },
+    {
+      path: '/admin',
+      name: 'admin-panel',
+      component: AdminPanel,
+      meta: { title: 'Panel admin', requiresPanel: true },
     },
 
     {
@@ -138,6 +153,21 @@ const router = createRouter({
 })
 
 const APP_NAME = 'Turismo Santander'
+
+router.beforeEach(async (to) => {
+  if (!to.meta?.requiresPanel) return true
+
+  await ensureAdminAuth()
+  const { isAuthenticated, canAccessPanel } = useAdminAuth()
+
+  if (!isAuthenticated.value) {
+    return { name: 'admin-login', query: { redirect: to.fullPath } }
+  }
+  if (!canAccessPanel.value) {
+    return { name: 'mas' }
+  }
+  return true
+})
 
 router.afterEach((to) => {
   const section = to.meta?.title

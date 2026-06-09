@@ -18,8 +18,8 @@
             <span>Provincias</span>
           </div>
           <div class="stat">
-            <strong>{{ scopedMunicipios.length }}</strong>
-            <span>Municipios</span>
+            <strong>{{ scopedMunicipios.filter(isMunicipioAvailable).length }}</strong>
+            <span>Municipios activos</span>
           </div>
           <div class="stat">
             <strong>{{ scopedDestinos.length }}</strong>
@@ -34,7 +34,8 @@
           <div>
             <h2>Departamentos</h2>
             <p class="block-sub">
-              Explora Colombia por departamento. Por ahora solo {{ availableDeptCount }} está disponible.
+              Departamentos en la base de datos. Puedes entrar solo si están activos y tienen al menos
+              un municipio activo ({{ availableDeptCount }} disponible{{ availableDeptCount === 1 ? '' : 's' }}).
             </p>
           </div>
           <button
@@ -74,7 +75,7 @@
             <span v-if="dept.available" class="dept-meta">
               {{ dept.municipioCount }} municipio{{ dept.municipioCount === 1 ? '' : 's' }}
             </span>
-            <span v-else class="dept-meta locked-label">Próximamente</span>
+            <span v-else class="dept-meta locked-label">{{ dept.lockedLabel || 'Próximamente' }}</span>
             <span v-if="dept.available && selectedDepartamento?.nombre === dept.nombre" class="dept-check">✓</span>
           </button>
         </div>
@@ -159,7 +160,10 @@
             <p class="block-sub">Filtra municipios y destinos por provincia</p>
           </div>
 
-          <div class="categories">
+          <p v-if="!provinceOptions.length" class="empty-inline">
+            No hay provincias registradas para este departamento.
+          </p>
+          <div v-else class="categories">
             <button
               :class="{ active: !selectedProvince }"
               @click="selectedProvince = null"
@@ -285,12 +289,47 @@
 
           <template v-if="viewMode === 'municipios'">
             <MunicipioList
-              v-if="displayMunicipios.length"
-              :municipios="displayMunicipios"
+              v-if="displayMunicipiosAvailable.length"
+              :municipios="displayMunicipiosAvailable"
               :loading="loadingMunicipios"
               @select="goToMunicipio"
             />
-            <div v-else-if="!loadingMunicipios" class="empty">
+
+            <div v-if="displayMunicipiosLocked.length" class="locked-muni-grid">
+              <article
+                v-for="m in displayMunicipiosLocked"
+                :key="'locked-' + (m.slug || m.id)"
+                class="locked-muni-card"
+                aria-disabled="true"
+              >
+                <div class="locked-muni-media">
+                  <img
+                    v-if="m.image"
+                    :src="m.image"
+                    :alt="m.name"
+                    loading="lazy"
+                    class="locked-muni-img"
+                  />
+                  <div v-else class="locked-muni-placeholder">🏘️</div>
+                  <span class="locked-muni-badge">Próximamente</span>
+                </div>
+                <div class="locked-muni-body">
+                  <strong>{{ m.name }}</strong>
+                  <span v-if="provinceNameForMuni(m)" class="locked-muni-sub">{{
+                    provinceNameForMuni(m)
+                  }}</span>
+                </div>
+              </article>
+            </div>
+
+            <div
+              v-else-if="
+                !loadingMunicipios &&
+                !displayMunicipiosAvailable.length &&
+                !displayMunicipiosLocked.length
+              "
+              class="empty"
+            >
               <p>No encontramos municipios con esos filtros.</p>
             </div>
 
@@ -378,9 +417,9 @@ import SearchBox from '@/components/SearchBox.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import BackButton from '@/components/BackButton.vue'
 
-import { getMunicipios } from '@/services/municipiosService'
+import { getMunicipiosForExplore } from '@/services/municipiosService'
 import { getDestinos } from '@/services/destinosService'
-import { getDepartamentosExplore } from '@/services/departamentosService'
+import { getDepartamentosExplore, getProvinciasByDepartamento } from '@/services/departamentosService'
 import { normalizeForSearch } from '@/utils/text'
 import { useFavorites } from '@/composables/useFavorites'
 import { usePagination } from '@/composables/usePagination'
@@ -402,12 +441,14 @@ const fallbackSvg = [
 ].join('\n')
 const fallbackImg = 'data:image/svg+xml,' + encodeURIComponent(fallbackSvg)
 
-const normalizeDept = (name) =>
+const normalizeTerritory = (name) =>
   String(name || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
+
+const normalizeDept = normalizeTerritory
 
 const router = useRouter()
 const route = useRoute()
@@ -416,6 +457,7 @@ const { isFavorite } = useFavorites()
 const departamentos = ref([])
 const selectedDepartamento = ref(null)
 const loadingDepartamentos = ref(true)
+const provinciasDepto = ref([])
 
 const municipios = ref([])
 const destinos = ref([])
@@ -443,6 +485,12 @@ const loadDepartamentos = async () => {
   loadingDepartamentos.value = true
   try {
     departamentos.value = await getDepartamentosExplore()
+    if (
+      selectedDepartamento.value &&
+      !departamentos.value.some((d) => d.nombre === selectedDepartamento.value.nombre)
+    ) {
+      clearDepartamento()
+    }
   } catch (e) {
     console.error(e)
   } finally {
@@ -453,9 +501,10 @@ const loadDepartamentos = async () => {
 const loadMunicipios = async () => {
   loadingMunicipios.value = true
   try {
-    municipios.value = (await getMunicipios()).map((m) => ({ ...m }))
+    municipios.value = await getMunicipiosForExplore()
   } catch (e) {
     console.error(e)
+    municipios.value = []
   } finally {
     loadingMunicipios.value = false
   }
@@ -467,6 +516,7 @@ const loadDestinos = async () => {
     destinos.value = await getDestinos()
   } catch (e) {
     console.error(e)
+    destinos.value = []
   } finally {
     loadingDestinos.value = false
   }
@@ -496,11 +546,6 @@ const applyRouteQuery = () => {
 
 onMounted(async () => {
   await Promise.all([loadDepartamentos(), loadMunicipios(), loadDestinos()])
-
-  const santander = departamentos.value.find(
-    (d) => d.available && normalizeDept(d.nombre) === 'santander',
-  )
-  if (santander) selectDepartamento(santander)
   applyRouteQuery()
 })
 
@@ -516,9 +561,9 @@ const availableDeptCount = computed(
 )
 
 const santanderDept = computed(() =>
-  departamentos.value.find(
-    (d) => d.available && normalizeDept(d.nombre) === 'santander',
-  ),
+  departamentos.value.find((d) => normalizeDept(d.nombre) === 'santander' && d.available) ||
+  departamentos.value.find((d) => normalizeDept(d.nombre) === 'santander') ||
+  null,
 )
 
 const heroLocation = computed(() =>
@@ -550,12 +595,42 @@ const belongsToSelectedDept = (item, municipioRef = null) => {
   if (!dept) return true
 
   const muni = municipioRef || item
-  if (dept.id_departamento && muni?.id_departamento) {
-    return muni.id_departamento === dept.id_departamento
+  if (dept.id_departamento && muni?.id_departamento != null) {
+    return Number(muni.id_departamento) === Number(dept.id_departamento)
   }
-
   const name = muni?.departamento || dept.nombre
   return normalizeDept(name) === normalizeDept(dept.nombre)
+}
+
+const isMunicipioAvailable = (m) => m?.available !== false
+
+/** Destinos en explore suelen venir sin embed de municipio; enlazamos por municipio_id. */
+const municipioById = computed(() => {
+  const map = {}
+  for (const m of municipios.value) {
+    const id = Number(m.id)
+    if (Number.isFinite(id)) map[id] = m
+  }
+  return map
+})
+
+const municipioForDestino = (destino) => {
+  if (!destino) return null
+  const embedded = destino.municipio
+  if (
+    embedded &&
+    (embedded.id_provincia != null ||
+      embedded.province ||
+      embedded.id_departamento != null ||
+      embedded.departamento)
+  ) {
+    return embedded
+  }
+  const mId = Number(destino.municipio_id ?? embedded?.id)
+  if (Number.isFinite(mId) && municipioById.value[mId]) {
+    return municipioById.value[mId]
+  }
+  return embedded || null
 }
 
 const scopedMunicipios = computed(() => {
@@ -565,10 +640,60 @@ const scopedMunicipios = computed(() => {
 
 const scopedDestinos = computed(() => {
   if (!selectedDepartamento.value) return []
-  return destinos.value.filter((d) => belongsToSelectedDept(d, d.municipio))
+  return destinos.value
+    .filter((d) => {
+      const muni = municipioForDestino(d)
+      return belongsToSelectedDept(d, muni) && isMunicipioAvailable(muni)
+    })
+    .map((d) => {
+      const muni = municipioForDestino(d)
+      return muni && !d.municipio ? { ...d, municipio: muni } : d
+    })
 })
 
-const selectDepartamento = (dept) => {
+const loadProvinciasDepto = async (dept) => {
+  if (!dept?.id_departamento) {
+    provinciasDepto.value = []
+    return
+  }
+  try {
+    provinciasDepto.value = await getProvinciasByDepartamento(dept.id_departamento)
+  } catch (e) {
+    console.error(e)
+    provinciasDepto.value = []
+  }
+}
+
+const provinceNameForMuni = (m) => {
+  if (!m) return null
+  if (m.id_provincia != null) {
+    const p = provinciasDepto.value.find((pr) => Number(pr.id_provincia) === Number(m.id_provincia))
+    if (p?.nombre) return p.nombre
+  }
+  const text = m.province && String(m.province).trim()
+  return text || null
+}
+
+const municipioMatchesProvince = (m, provName) => {
+  if (!provName) return true
+  if (!m) return false
+
+  const target = normalizeTerritory(provName)
+  const label = provinceNameForMuni(m)
+  if (label && normalizeTerritory(label) === target) return true
+  if (m.province && normalizeTerritory(m.province) === target) return true
+
+  if (m.id_provincia != null) {
+    const p = provinciasDepto.value.find(
+      (pr) => Number(pr.id_provincia) === Number(m.id_provincia),
+    )
+    if (p?.nombre && normalizeTerritory(p.nombre) === target) return true
+  }
+
+  return false
+}
+
+const selectDepartamento = async (dept) => {
   if (!dept?.available) return
 
   if (selectedDepartamento.value?.nombre === dept.nombre) {
@@ -581,10 +706,12 @@ const selectDepartamento = (dept) => {
   searchQuery.value = ''
   resetFilters(false)
   viewMode.value = 'municipios'
+  await loadProvinciasDepto(dept)
 }
 
 const clearDepartamento = () => {
   selectedDepartamento.value = null
+  provinciasDepto.value = []
   resetFilters()
 }
 
@@ -601,9 +728,16 @@ const PROVINCE_ORDER = [
 ]
 
 const provinceOptions = computed(() => {
-  const set = new Set(scopedMunicipios.value.map((m) => m?.province).filter(Boolean))
+  const set = new Set()
+  for (const p of provinciasDepto.value) {
+    if (p?.nombre) set.add(p.nombre)
+  }
+  for (const m of scopedMunicipios.value.filter(isMunicipioAvailable)) {
+    const label = provinceNameForMuni(m)
+    if (label) set.add(label)
+  }
   const ordered = PROVINCE_ORDER.filter((p) => set.has(p))
-  const extras = [...set].filter((p) => !PROVINCE_ORDER.includes(p)).sort((a, b) => a.localeCompare(b))
+  const extras = [...set].filter((p) => !PROVINCE_ORDER.includes(p)).sort((a, b) => a.localeCompare(b, 'es'))
   return [...ordered, ...extras]
 })
 
@@ -618,7 +752,7 @@ const trendingDestinos = computed(() => {
 })
 
 const filteredMunicipios = computed(() => {
-  let results = scopedMunicipios.value
+  let results = scopedMunicipios.value.slice()
 
   const q = normalizeForSearch(searchQuery.value)
   if (q) {
@@ -631,11 +765,24 @@ const filteredMunicipios = computed(() => {
   }
 
   if (selectedProvince.value) {
-    results = results.filter((m) => m.province === selectedProvince.value)
+    results = results.filter((m) => municipioMatchesProvince(m, selectedProvince.value))
   }
 
-  return results
+  return results.sort((a, b) => {
+    const aa = isMunicipioAvailable(a) ? 0 : 1
+    const bb = isMunicipioAvailable(b) ? 0 : 1
+    if (aa !== bb) return aa - bb
+    return String(a.name).localeCompare(String(b.name), 'es')
+  })
 })
+
+const filteredMunicipiosAvailable = computed(() =>
+  filteredMunicipios.value.filter(isMunicipioAvailable),
+)
+
+const filteredMunicipiosLocked = computed(() =>
+  filteredMunicipios.value.filter((m) => !isMunicipioAvailable(m)),
+)
 
 const moods = [
   { label: 'Aventura', icon: '🌄', value: 'Aventura' },
@@ -681,7 +828,9 @@ const filteredDestinos = computed(() => {
   }
 
   if (selectedProvince.value) {
-    results = results.filter((d) => d?.municipio?.province === selectedProvince.value)
+    results = results.filter((d) =>
+      municipioMatchesProvince(municipioForDestino(d), selectedProvince.value),
+    )
   }
 
   if (selectedMood.value) {
@@ -729,10 +878,11 @@ const filteredDestinos = computed(() => {
   return results
 })
 
-const municipiosPagination = usePagination(filteredMunicipios, LIST_PAGE_SIZE)
+const municipiosPagination = usePagination(filteredMunicipiosAvailable, LIST_PAGE_SIZE)
 const destinosPagination = usePagination(filteredDestinos, LIST_PAGE_SIZE)
 
-const displayMunicipios = computed(() => municipiosPagination.displayItems.value)
+const displayMunicipiosAvailable = computed(() => municipiosPagination.displayItems.value)
+const displayMunicipiosLocked = computed(() => filteredMunicipiosLocked.value)
 const displayDestinos = computed(() => destinosPagination.displayItems.value)
 
 const municipiosPagState = computed(() => ({
@@ -919,13 +1069,16 @@ const scrollToProvinces = () => {
 }
 
 const goToMunicipio = (municipio) => {
+  if (!isMunicipioAvailable(municipio)) return
   if (!municipio?.slug) return
   router.push(AppRoute.municipio(municipio))
 }
 
 const goToDestino = (dest) => {
-  if (!dest?.slug || !dest?.municipio?.slug) return
-  router.push(AppRoute.destino(dest))
+  if (!dest?.slug) return
+  const muni = municipioForDestino(dest)
+  if (!muni?.slug) return
+  router.push(AppRoute.destino({ ...dest, municipio: muni }))
 }
 
 const goBack = () => router.back()
@@ -1097,6 +1250,74 @@ const goBack = () => router.back()
 
 .locked-label {
   font-style: italic;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.locked-muni-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.locked-muni-card {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px dashed #d1d5db;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.locked-muni-media {
+  position: relative;
+  height: 120px;
+  background: #e5e7eb;
+}
+
+.locked-muni-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.6);
+}
+
+.locked-muni-placeholder {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.locked-muni-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.locked-muni-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.locked-muni-body strong {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.locked-muni-sub {
+  font-size: 0.78rem;
+  color: #9ca3af;
 }
 
 .dept-check {

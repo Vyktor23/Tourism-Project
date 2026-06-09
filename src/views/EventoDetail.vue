@@ -94,7 +94,7 @@
 
       <section v-if="hasMedia" class="block">
         <div class="block-head">
-          <h2>Fotos y videos</h2>
+          <h2>Galería</h2>
           <p class="block-sub">{{ eventoMediaSummary }}</p>
         </div>
         <div class="content-card gallery-wrap">
@@ -280,7 +280,11 @@ onMounted(async () => {
 
     municipio.value = await getMunicipioBySlug(municipioSlug)
     const raw = await getEventoById(eventoId)
-    evento.value = normalizeEvento(raw)
+    if (raw && municipio.value?.id && Number(raw.municipio_id) !== Number(municipio.value.id)) {
+      evento.value = null
+    } else {
+      evento.value = normalizeEvento(raw)
+    }
   } catch (err) {
     console.error('Error cargando evento:', err)
   } finally {

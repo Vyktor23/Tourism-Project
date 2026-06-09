@@ -79,11 +79,22 @@ const uniq = (arr) => {
   return out
 }
 
+const firstGalleryImage = (gallery) => {
+  if (!Array.isArray(gallery)) return null
+  for (const item of gallery) {
+    const url = typeof item === 'string' ? item.trim() : item?.url || item?.src || ''
+    if (url) return url
+  }
+  return null
+}
+
 export const normalizeDestino = (dest) => {
   if (!dest || typeof dest !== 'object') return dest
 
   const categories = Array.isArray(dest.categories) ? dest.categories : []
   const mood = Array.isArray(dest.mood) ? dest.mood : []
+  const image =
+    String(dest.image || '').trim() || firstGalleryImage(dest.gallery) || null
 
   const categoriesCanon = uniq(categories.map(canonicalizeCategory).filter(Boolean))
   const moodCanon = uniq(mood.map(canonicalizeMood).filter(Boolean))
@@ -92,6 +103,7 @@ export const normalizeDestino = (dest) => {
   // Keep originals, add canonical fields used for filtering / display
   return {
     ...dest,
+    image,
     categoriesCanon,
     moodCanon,
     difficultyCanon

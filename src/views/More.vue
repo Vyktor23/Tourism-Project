@@ -100,6 +100,26 @@
         </div>
       </section>
 
+      <!-- ADMIN -->
+      <section class="block">
+        <div class="block-head">
+          <h2>Administracion</h2>
+          <p class="block-sub">Carga de territorio y contenido</p>
+        </div>
+        <div class="menu-list">
+          <button type="button" class="menu-card" @click="goTo(adminRoute)">
+            <span class="menu-icon">🛠️</span>
+            <div class="menu-body">
+              <strong>{{ isAdmin ? 'Panel admin' : 'Acceso admin' }}</strong>
+              <span class="menu-desc">
+                {{ isAdmin ? 'Gestionar departamentos (mas modulos proximamente)' : 'Inicia sesion con usuario admin' }}
+              </span>
+            </div>
+            <span class="menu-arrow">›</span>
+          </button>
+        </div>
+      </section>
+
       <!-- UTILIDAD -->
       <section class="block">
         <div class="block-head">
@@ -186,9 +206,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavorites } from '@/composables/useFavorites'
+import { useAdminAuth } from '@/composables/useAdminAuth'
 import BackButton from '@/components/BackButton.vue'
 import { AppRoute } from '@/router/links.js'
 
@@ -196,6 +217,7 @@ defineOptions({ name: 'MorePage' })
 
 const router = useRouter()
 const { favorites } = useFavorites()
+const { isAdmin, initAdminAuth } = useAdminAuth()
 
 const exploreMenu = [
   {
@@ -265,11 +287,14 @@ const activeLinksCount = computed(
 )
 
 const comingSoonCount = computed(
-  () =>
-    allMenuItems.filter((i) => !i.enabled).length +
-    utilityMenu.length +
-    1,
+  () => allMenuItems.filter((i) => !i.enabled).length + utilityMenu.length,
 )
+
+const adminRoute = computed(() => (isAdmin.value ? AppRoute.adminPanel() : AppRoute.adminLogin()))
+
+onMounted(() => {
+  void initAdminAuth()
+})
 
 const goBack = () => router.back()
 const goTo = (routeLocation) => router.push(routeLocation)

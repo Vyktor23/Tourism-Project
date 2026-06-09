@@ -103,7 +103,7 @@
       <!-- FOTOS Y VIDEOS -->
       <section v-if="hasMunicipioMedia" class="block">
         <div class="block-head">
-          <h2>Fotos y videos</h2>
+          <h2>Galería</h2>
           <p class="block-sub">{{ municipioMediaSummary }}</p>
         </div>
         <div class="content-card gallery-wrap">
@@ -729,24 +729,39 @@ const goToDestination = (destino) => {
 }
 
 onMounted(async () => {
+  const municipioSlug = route.params.municipioSlug
+
   try {
-    // 👇 PARAM CORRECTO
-    const municipioSlug = route.params.municipioSlug
-
-    // 1️⃣ Municipio
     municipio.value = await getMunicipioBySlug(municipioSlug)
-
-    // 2️⃣ Destinos del municipio
-    destinos.value = await getDestinosByMunicipio(municipio.value.id)
-
-
-    // 3️⃣ Eventos culturales (si existen)
-    eventos.value = await getEventosByMunicipioId(municipio.value.id)
   } catch (error) {
-    console.error('Error cargando municipio o destinos:', error)
-  } finally {
+    console.error('Error cargando municipio:', error)
     loading.value = false
+    return
   }
+
+  const muni = municipio.value
+  const muniId = muni?.id
+
+  const [destinosRes, eventosRes] = await Promise.allSettled([
+    muniId ? getDestinosByMunicipio(muniId, muni) : Promise.resolve([]),
+    muniId ? getEventosByMunicipioId(muniId) : Promise.resolve([]),
+  ])
+
+  if (destinosRes.status === 'fulfilled') {
+    destinos.value = destinosRes.value || []
+  } else {
+    console.error('Error cargando destinos del municipio:', destinosRes.reason)
+    destinos.value = []
+  }
+
+  if (eventosRes.status === 'fulfilled') {
+    eventos.value = eventosRes.value || []
+  } else {
+    console.error('Error cargando eventos del municipio:', eventosRes.reason)
+    eventos.value = []
+  }
+
+  loading.value = false
 })
 
 
@@ -889,6 +904,11 @@ const platosAll = computed(() => {
   return rel
     .slice()
     .sort((a, b) => (a?.sort_order ?? 0) - (b?.sort_order ?? 0))
+    .filter((r) => {
+      const p = r?.platos
+      if (!p?.id) return false
+      return !p.status || p.status === 'activo'
+    })
     .map((r) => ({
       ...(r?.platos || {}),
       is_typical: !!r?.is_typical,

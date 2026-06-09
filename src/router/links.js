@@ -10,6 +10,8 @@ export const AppRoute = {
   consejosSeguridad: () => ({ name: 'consejos-seguridad' }),
   acercaDe: () => ({ name: 'acerca-de' }),
   planificarViaje: () => ({ name: 'planificar-viaje' }),
+  adminLogin: () => ({ name: 'admin-login' }),
+  adminPanel: () => ({ name: 'admin-panel' }),
 
   municipio: (municipio) => ({
     name: 'municipio',
