@@ -4,13 +4,22 @@
 
       <!-- HERO -->
       <header class="hero">
-        <div v-if="heroSlides.length" class="hero-slides" aria-hidden="true">
-          <div
+        <div
+          v-if="heroSlides.length"
+          class="hero-slides"
+          :class="{ ready: heroSlidesReady }"
+          aria-hidden="true"
+        >
+          <img
             v-for="(url, i) in heroSlides"
             :key="url"
+            :src="url"
+            alt=""
             class="hero-slide"
             :class="{ active: i === heroSlideIndex }"
-            :style="{ backgroundImage: 'url(' + url + ')' }"
+            :fetchpriority="i === 0 ? 'high' : 'low'"
+            decoding="async"
+            draggable="false"
           />
         </div>
         <div class="hero-overlay" />
@@ -299,6 +308,7 @@ import { getMunicipios } from '@/services/municipiosService'
 import { getDestinos } from '@/services/destinosService'
 import { projectAbout as project } from '@/data/projectAbout.js'
 import { AppRoute } from '@/router/links.js'
+import { preloadImage, preloadImages } from '@/utils/preloadImages.js'
 
 defineOptions({ name: 'HomePage' })
 
@@ -326,11 +336,12 @@ const mapSection = ref(null)
 const testimonialIndex = ref(0)
 const heroSlides = ref([])
 const heroSlideIndex = ref(0)
+const heroSlidesReady = ref(false)
 let testimonialTimer = null
 let heroTimer = null
 
 const HERO_SLIDE_MAX = 12
-const HERO_SLIDE_MS = 5500
+const HERO_SLIDE_MS = 7000
 
 const shuffle = (arr) => {
   const a = [...arr]
@@ -341,7 +352,7 @@ const shuffle = (arr) => {
   return a
 }
 
-const buildHeroSlides = () => {
+const buildHeroSlides = async () => {
   const urls = new Set()
   for (const d of destinos.value) {
     if (d?.image) urls.add(d.image)
@@ -349,13 +360,34 @@ const buildHeroSlides = () => {
   for (const m of municipios.value) {
     if (m?.image) urls.add(m.image)
   }
-  heroSlides.value = shuffle([...urls]).slice(0, HERO_SLIDE_MAX)
+
+  const selected = shuffle([...urls]).slice(0, HERO_SLIDE_MAX)
+  heroSlidesReady.value = false
   heroSlideIndex.value = 0
+
+  if (!selected.length) {
+    heroSlides.value = []
+    return
+  }
+
+  const loaded = await preloadImages(selected)
+  heroSlides.value = loaded.length ? loaded : selected
+  heroSlidesReady.value = true
 }
 
-const nextHeroSlide = () => {
+const nextHeroSlide = async () => {
   if (heroSlides.value.length < 2) return
-  heroSlideIndex.value = (heroSlideIndex.value + 1) % heroSlides.value.length
+
+  const nextIndex = (heroSlideIndex.value + 1) % heroSlides.value.length
+  const nextUrl = heroSlides.value[nextIndex]
+
+  try {
+    await preloadImage(nextUrl)
+  } catch {
+    /* ya precargada o fallo puntual; igual avanzamos */
+  }
+
+  heroSlideIndex.value = nextIndex
 }
 
 const startHeroRotation = () => {
@@ -523,9 +555,11 @@ onMounted(async () => {
   try {
     const [munis, dests] = await Promise.all([getMunicipios(), getDestinos()])
     municipios.value = munis || []
-    destinos.value = dests || []
+    destinos.value = (dests || []).filter(
+      (d) => !d?.municipio_id || munis.some((m) => m.id === d.municipio_id),
+    )
     assignTestimonialAvatars()
-    buildHeroSlides()
+    await buildHeroSlides()
     startHeroRotation()
   } catch (e) {
     console.error('Error cargando home:', e)
@@ -572,24 +606,44 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   z-index: 0;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.hero-slides.ready {
+  opacity: 1;
 }
 
 .hero-slide {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   opacity: 0;
-  transition: opacity 1.4s ease-in-out;
-  transform: scale(1.04);
+  z-index: 0;
+  pointer-events: none;
+  transition:
+    opacity 1.6s ease-in-out,
+    transform 12s ease-out;
+  transform: scale(1.05);
+  will-change: opacity, transform;
 }
 
 .hero-slide.active {
   opacity: 1;
+  z-index: 1;
   transform: scale(1);
-  transition:
-    opacity 1.4s ease-in-out,
-    transform 8s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide,
+  .hero-slide.active,
+  .hero-slides {
+    transition: none;
+    transform: none;
+  }
 }
 
 .hero-overlay {

@@ -1,35 +1,40 @@
 import { supabase } from '@/data/clientSupabase.js'
 
 const PLATO_FULL =
-  'id, name, slug, description, tags, image_url, gallery, id_departamento, ingredientes, historia, preparacion, categoria, tiempo_preparacion, dificultad, created_at, updated_at'
+  'id, name, slug, description, tags, image_url, gallery, id_departamento, ingredientes, historia, preparacion, categoria, tiempo_preparacion, dificultad, created_at, updated_at, status'
 
 const PLATO_BASIC = 'id, name, slug, description, tags, image_url'
 
 const isMissingColumn = (msg, col) =>
   new RegExp(col, 'i').test(msg) && /does not exist|column/i.test(msg)
 
+const withActivoFilter = (query) => query.eq('status', 'activo')
+
 export const getPlatoBySlug = async (slug) => {
   if (!slug) return null
 
-  let { data, error } = await supabase
-    .from('platos')
-    .select(PLATO_FULL)
-    .eq('slug', slug)
-    .single()
+  const run = async (useStatus, fields) => {
+    let q = supabase.from('platos').select(fields).eq('slug', slug)
+    if (useStatus) q = withActivoFilter(q)
+    return q.single()
+  }
+
+  let { data, error } = await run(true, PLATO_FULL)
+
+  if (error && isMissingColumn(String(error.message || ''), 'status')) {
+    ;({ data, error } = await run(false, PLATO_FULL))
+  }
 
   if (
     error &&
     (isMissingColumn(String(error.message || ''), 'ingredientes') ||
       isMissingColumn(String(error.message || ''), 'gallery'))
   ) {
-    ;({ data, error } = await supabase
-      .from('platos')
-      .select(PLATO_BASIC)
-      .eq('slug', slug)
-      .single())
+    ;({ data, error } = await run(false, PLATO_BASIC))
   }
 
   if (error) throw error
+  if (data?.status && data.status !== 'activo') return null
   return data
 }
 

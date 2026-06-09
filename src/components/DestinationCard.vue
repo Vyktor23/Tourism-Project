@@ -1,7 +1,7 @@
 <template>
   <article :class="['destination-card', variant]" @click="onSelect">
     <div class="image-wrapper">
-      <img :src="imageSrc" :alt="destination.name" />
+      <AppImage :src="imageSources" :alt="destination.name" :fallback="placeholderImg" />
 
       <!-- ❤️ FAVORITO SIEMPRE -->
       <FavoriteButton :destination="destination" @click.stop />
@@ -32,6 +32,7 @@
 <script setup>
 import { computed } from "vue";
 import FavoriteButton from "@/components/FavoriteButton.vue";
+import AppImage from "@/components/AppImage.vue";
 
 const props = defineProps({
   destination: { type: Object, required: true },
@@ -70,19 +71,17 @@ const ratingText = computed(() => {
   return Number(r).toFixed(1);
 });
 
-const imageSrc = computed(() => {
-  // Si no hay imagen, evita romper el layout sin depender de servicios externos.
-  const svgLines = [
-    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500">',
-    '<rect width="100%" height="100%" fill="#111"/>',
-    '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="28" font-family="sans-serif">',
-    "Sin imagen",
-    "</text>",
-    "</svg>",
-  ].join("");
+const placeholderImg =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect width="100%" height="100%" fill="#111"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="28" font-family="sans-serif">Sin imagen</text></svg>',
+  );
 
-  const uri = "data:image/svg+xml," + encodeURIComponent(svgLines);
-  return props.destination?.image || uri;
+const imageSources = computed(() => {
+  const d = props.destination;
+  const main = d?.image ? [d.image] : [];
+  const gallery = Array.isArray(d?.gallery) ? d.gallery.filter(Boolean) : [];
+  return [...main, ...gallery].filter((url, i, arr) => arr.indexOf(url) === i);
 });
 </script>
 
@@ -109,10 +108,11 @@ const imageSrc = computed(() => {
   height: 150px;
 }
 
-.image-wrapper img {
+.image-wrapper :deep(img) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 /* CATEGORY */

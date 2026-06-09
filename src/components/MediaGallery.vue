@@ -10,7 +10,7 @@
         class="image-btn"
         @click="openImage(i)"
       >
-        <img :src="img" :alt="altPrefix + ' ' + (i + 1)" loading="lazy" />
+        <AppImage :src="img" :alt="altPrefix + ' ' + (i + 1)" loading="lazy" />
       </button>
     </div>
 
@@ -29,7 +29,7 @@
     </div>
 
     <div v-if="showImage" class="lightbox" @click.self="closeImage">
-      <img :src="images[activeIndex]" :alt="altPrefix" />
+      <AppImage :src="images[activeIndex]" :alt="altPrefix" loading="eager" />
       <button type="button" class="close" @click="closeImage">✕</button>
     </div>
   </section>
@@ -38,6 +38,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { uniqueImages, extractVideoUrls, toEmbedUrl } from '@/utils/media'
+import AppImage from '@/components/AppImage.vue'
 
 const props = defineProps({
   title: { type: String, default: 'Galería' },
@@ -97,7 +98,7 @@ const closeImage = () => {
   aspect-ratio: 4 / 3;
 }
 
-.image-btn img {
+.image-btn :deep(img) {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -138,7 +139,7 @@ const closeImage = () => {
   padding: 20px;
 }
 
-.lightbox img {
+.lightbox :deep(img) {
   max-width: 100%;
   max-height: 90vh;
   object-fit: contain;

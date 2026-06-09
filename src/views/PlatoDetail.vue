@@ -92,7 +92,7 @@
 
       <section v-if="hasMedia" class="block">
         <div class="block-head">
-          <h2>Fotos y videos</h2>
+          <h2>Galería</h2>
           <p class="block-sub">{{ platoMediaSummary }}</p>
         </div>
         <div class="content-card gallery-wrap">
@@ -287,6 +287,7 @@ onMounted(async () => {
 
     if (municipio.value?.id && plato.value?.id) {
       relation.value = await getMunicipioPlatoRelation(municipio.value.id, plato.value.id)
+      if (!relation.value) plato.value = null
     }
   } catch (err) {
     console.error('Error cargando plato:', err)

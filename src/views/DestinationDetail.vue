@@ -17,12 +17,14 @@
         <BackButton floating @click="goBack" />
 
         <div class="hero-media">
-          <img
-            v-if="heroImage"
-            :src="heroImage"
+          <div class="hero-fallback" aria-hidden="true" />
+          <AppImage
+            v-if="destinoMedia.images.length"
+            img-class="hero-photo"
+            :src="destinoMedia.images"
             :alt="destination.name"
+            loading="eager"
           />
-          <div v-else class="hero-fallback" />
 
           <FavoriteButton
             :destination="destination"
@@ -116,29 +118,10 @@
         </article>
       </section>
 
-      <!-- ACTIVIDADES -->
-      <section v-if="actividades.length" class="block">
-        <div class="block-head">
-          <h2>Actividades</h2>
-          <p class="block-sub">Que puedes hacer en este destino</p>
-        </div>
-        <div class="actividades-list">
-          <article v-for="act in actividades" :key="act.id" class="actividad-card">
-            <h3>{{ act.nombre }}</h3>
-            <p v-if="act.descripcion">{{ act.descripcion }}</p>
-            <div class="actividad-meta">
-              <span v-if="act.duracion">⏱ {{ act.duracion }}</span>
-              <span v-if="act.dificultad">{{ act.dificultad }}</span>
-              <span v-if="act.costo">{{ act.costo }}</span>
-            </div>
-          </article>
-        </div>
-      </section>
-
       <!-- FOTOS Y VIDEOS -->
       <section v-if="hasMedia" class="block">
         <div class="block-head">
-          <h2>Fotos y videos</h2>
+          <h2>Galería</h2>
           <p class="block-sub">{{ mediaSummary }}</p>
         </div>
         <div class="content-card gallery-wrap">
@@ -201,12 +184,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getDestinoBySlug } from '@/services/destinosService'
-import { getActividadesByDestinoId } from '@/services/actividadesService'
+import { loadDestinoDetailPage } from '@/services/destinosService'
 import DestinationMap from '@/components/DestinationMap.vue'
 import FavoriteButton from '@/components/FavoriteButton.vue'
 import BackButton from '@/components/BackButton.vue'
 import MediaGallery from '@/components/MediaGallery.vue'
+import AppImage from '@/components/AppImage.vue'
 import { buildEntityMedia } from '@/utils/media'
 import {
   locationPathLine,
@@ -221,7 +204,6 @@ const route = useRoute()
 const router = useRouter()
 
 const destination = ref(null)
-const actividades = ref([])
 const loading = ref(true)
 const mapBlock = ref(null)
 
@@ -232,8 +214,6 @@ const destinoMedia = computed(() =>
     videoFields: [destination.value?.contacto, destination.value?.sources],
   }),
 )
-
-const heroImage = computed(() => destinoMedia.value.heroImage)
 
 const hasMedia = computed(() => destinoMedia.value.totalCount > 0)
 
@@ -247,14 +227,13 @@ const mediaSummary = computed(() => {
 
 onMounted(async () => {
   try {
-    destination.value = await getDestinoBySlug(route.params.destinoSlug)
-    if (destination.value?.id) {
-      actividades.value = await getActividadesByDestinoId(destination.value.id)
-    }
+    destination.value = await loadDestinoDetailPage(
+      route.params.destinoSlug,
+      route.params.municipioSlug,
+    )
   } catch (err) {
     console.error('Error cargando destino:', err)
     destination.value = null
-    actividades.value = []
   } finally {
     loading.value = false
   }
@@ -368,21 +347,29 @@ const hasHighlights = computed(() =>
   height: clamp(300px, 48vh, 420px);
 }
 
-.hero-media img,
 .hero-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #222, #444);
+}
+
+.hero-media :deep(.hero-photo),
+.hero-media :deep(img) {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.hero-fallback {
-  background: linear-gradient(135deg, #222, #444);
-}
-
 .hero-overlay {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -560,46 +547,6 @@ const hasHighlights = computed(() =>
   opacity: 0.85;
 }
 
-/* ACTIVIDADES */
-.actividades-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.actividad-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
-}
-
-.actividad-card h3 {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-}
-
-.actividad-card p {
-  margin: 0 0 8px;
-  font-size: 0.88rem;
-  color: #555;
-  line-height: 1.45;
-}
-
-.actividad-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.actividad-meta span {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #f4f4f5;
-}
-
 .gallery-wrap {
   padding: 0;
 }
@@ -717,11 +664,6 @@ const hasHighlights = computed(() =>
 @media (min-width: 640px) {
   .quick-actions {
     max-width: 480px;
-  }
-
-  .actividades-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
